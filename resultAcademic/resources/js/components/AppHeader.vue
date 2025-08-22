@@ -14,6 +14,7 @@ import type { BreadcrumbItem, NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-vue-next';
 import { computed } from 'vue';
+import SearchBar from './SearchBar.vue';
 
 interface Props {
     breadcrumbs?: BreadcrumbItem[];
@@ -36,6 +37,11 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: '/dashboard',
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Publicaciones',
+        href: '/publicaciones',
         icon: LayoutGrid,
     },
 ];
@@ -128,11 +134,11 @@ const rightNavItems: NavItem[] = [
                 </div>
 
                 <div class="ml-auto flex items-center space-x-2">
-                    <div class="relative flex items-center space-x-1">
-                        <Button variant="ghost" size="icon" class="group h-9 w-9 cursor-pointer">
-                            <Search class="size-5 opacity-80 group-hover:opacity-100" />
-                        </Button>
+                    <div class="w-full max-w-xs">
+                        <SearchBar />
+                    </div>
 
+                    <div class="relative flex items-center space-x-1">
                         <div class="hidden space-x-1 lg:flex">
                             <template v-for="item in rightNavItems" :key="item.title">
                                 <TooltipProvider :delay-duration="0">

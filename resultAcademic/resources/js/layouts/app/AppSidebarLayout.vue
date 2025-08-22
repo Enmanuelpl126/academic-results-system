@@ -14,7 +14,7 @@ withDefaults(defineProps<Props>(), {
 });
 </script>
 
-<template>
+<template> 
     <AppShell variant="sidebar">
         <AppSidebar />
         <AppContent variant="sidebar" class="overflow-x-hidden">
