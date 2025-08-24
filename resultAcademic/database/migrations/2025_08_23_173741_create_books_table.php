@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('departments', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->text('description')->nullable();
-            $table->unsignedBigInteger('head_of_department_id')->nullable();
+        Schema::create('books', function (Blueprint $table) {
+            $table->unsignedBigInteger('id')->primary(); 
+            $table->string('editorial')->nullable();
+            $table->string('place')->nullable();
             $table->timestamps();
+            $table->foreign('id')->references('id')->on('publications')->onDelete('cascade');
         });
     }
 
@@ -25,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('departments');
+        Schema::dropIfExists('books');
     }
 };
