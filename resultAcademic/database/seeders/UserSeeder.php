@@ -24,6 +24,7 @@ class UserSeeder extends Seeder
             'teaching_category' => 'ninguna',
             'scientific_category' => 'ninguna',
             'professional_level' => 'ninguna',
+            'role' => 'admin',
         ],
         [
             'ci' => '12345678990',
@@ -32,6 +33,7 @@ class UserSeeder extends Seeder
             'teaching_category' => 'ninguna',
             'scientific_category' => 'Titular',
             'professional_level' => 'Doctor en Ciencias',
+            'role' => 'directive',
         ],
         [
             'ci' => '22222222222',
@@ -40,6 +42,7 @@ class UserSeeder extends Seeder
             'teaching_category' => 'Profesor Principal',
             'scientific_category' => 'Titular',
             'professional_level' => 'Master',
+            'role' => 'head_dp',
         ],
         [
             'ci' => '1010111122',
@@ -48,6 +51,7 @@ class UserSeeder extends Seeder
             'teaching_category' => 'Profesor Principal',
             'scientific_category' => 'Titular',
             'professional_level' => 'Master',
+            'role' => 'head_dp',
         ],
         [
             'ci' => '2121214345',
@@ -56,6 +60,7 @@ class UserSeeder extends Seeder
             'teaching_category' => 'Profesor Principal',
             'scientific_category' => 'Titular',
             'professional_level' => 'Master',
+            'role' => 'profesor',
         ],
         [
             'ci' => '32323232324',
@@ -64,36 +69,40 @@ class UserSeeder extends Seeder
             'teaching_category' => 'Profesor Principal',
             'scientific_category' => 'Titular',
             'professional_level' => 'Master',
+            'role' => 'profesor',
         ],
-        
     ];
 
     public function run(): void
-
     {
-        foreach ($this->users as $userData) {
-            User::create(array_merge($userData, [
-                'password' => Hash::make('password')
-            ]));
-        }
-
-        $this->users[0]->assignRole('admin');
-        $this->users[1]->assignRole('directive');
-        $this->users[2]->assignRole('head_dp');
-        $this->users[3]->assignRole('profesor');
-        $this->users[4]->assignRole('profesor');
-        $this->users[5]->assignRole('profesor');
-        
+       
+        $admin = Role::firstOrCreate(['name' => 'admin']);
+        $directive = Role::firstOrCreate(['name' => 'directive']);
+        $head_dp = Role::firstOrCreate(['name' => 'head_dp']);
+        $profesor = Role::firstOrCreate(['name' => 'profesor']);
 
        
-       $admin = Role::create(['name' => 'admin']);
-       $directive = Role::create(['name' => 'directive']);
-       $head_dp = Role::create(['name' => 'head_dp']);
-       $profesor = Role::create(['name' => 'profesor']);
+        $edit = Permission::firstOrCreate(['name' => 'edit results']);
+        $delete = Permission::firstOrCreate(['name' => 'delete results']);
+        $create = Permission::firstOrCreate(['name' => 'create results']);
 
-       Permission::create(['name' => 'edit results'])->syncRoles([$admin, $directive, $head_dp]);
-       Permission::create(['name' => 'delete results'])->syncRoles($admin);
-       Permission::create(['name' => 'create results'])->syncRoles([$admin, $directive, $head_dp, $profesor]);
+        $edit->syncRoles([$admin, $directive, $head_dp]);
+        $delete->syncRoles([$admin]);
+        $create->syncRoles([$admin, $directive, $head_dp, $profesor]);
 
+       
+        foreach ($this->users as $userData) {
+            $roleName = $userData['role'];
+            unset($userData['role']);
+
+            $user = User::updateOrCreate(
+                ['email' => $userData['email']],
+                array_merge($userData, [
+                    'password' => Hash::make('password'),
+                ])
+            );
+
+            $user->syncRoles([$roleName]);
+        }
     }
 }
