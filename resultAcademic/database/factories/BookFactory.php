@@ -20,6 +20,7 @@ class BookFactory extends Factory
     {
         return [
             'id' => Publication::factory(),
+            
             'editorial' => $this->faker->randomElement([
                 'Editorial Académica',
                 'Springer',

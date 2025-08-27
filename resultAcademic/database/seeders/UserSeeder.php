@@ -43,6 +43,7 @@ class UserSeeder extends Seeder
             'scientific_category' => 'Titular',
             'professional_level' => 'Master',
             'role' => 'head_dp',
+            
         ],
         [
             'ci' => '1010111122',

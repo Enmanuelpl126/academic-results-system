@@ -1,25 +1,22 @@
 <script setup lang="ts">
 import AppContent from '@/components/AppContent.vue';
-import AppHeader from '@/components/AppHeader.vue';
+import Navbar from '@/components/Navbar.vue';
 import AppShell from '@/components/AppShell.vue';
-import NavFooter from '@/components/NavFooter.vue';
-import type { BreadcrumbItemType } from '@/types';
+import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
-interface Props {
-    breadcrumbs?: BreadcrumbItemType[];
-}
-
-withDefaults(defineProps<Props>(), {
-    breadcrumbs: () => [],
-});
+const page = usePage();
+const activeSection = computed(() => page.url.substring(1) || 'dashboard');
+const contentMaxWidth = computed(() =>
+  activeSection.value === 'awards' ? 'max-w-screen-2xl' : 'max-w-7xl'
+);
 </script>
 
 <template>
     <AppShell class="flex-col">
-        <AppHeader :breadcrumbs="breadcrumbs" />
-        <AppContent>
+        <Navbar :active-section="activeSection" @section-change="(section: string) => $inertia.visit(`/${section}`)" />
+        <AppContent :maxWidth="contentMaxWidth">
             <slot />
         </AppContent>
     </AppShell>
-   
 </template>
