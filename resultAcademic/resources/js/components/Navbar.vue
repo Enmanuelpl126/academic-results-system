@@ -166,6 +166,7 @@
 import { ref } from 'vue'
 import NavItem from './NavItem.vue'
 import { useUser } from '../composables/useUser.js'
+import { router } from '@inertiajs/vue3'
 // Iconos usados desde lucide-vue-next, renombrados con sufijo Icon
 import { 
   BookOpen as BookOpenIcon,
@@ -226,10 +227,9 @@ const handleSectionChange = (section) => {
   isMenuOpen.value = false
 }
 
-// Cierra la sesión del usuario y redirige al dashboard
+// Cierra la sesión del usuario en el backend y deja que el backend redirija al login
 const handleLogout = () => {
-  setCurrentUser(null)
-  emit('section-change', 'dashboard')
+  router.post('/logout')
 }
 
 // Definición de los elementos principales de navegación

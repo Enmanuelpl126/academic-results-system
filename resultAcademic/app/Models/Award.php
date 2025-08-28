@@ -16,6 +16,10 @@ class Award extends Model
         'date',
     ];
 
+    protected $casts = [
+        'date' => 'date',
+    ];
+
    
     public function users(): BelongsToMany
     {

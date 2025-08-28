@@ -3,7 +3,7 @@
   <div class="w-full px-2 sm:px-4 lg:px-8 py-8">
     <!-- Encabezado con título y botón de agregar -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Awards</h2>
+      <h2 class="text-2xl font-bold text-gray-900">Premios</h2>
       <button
         @click="showForm = true"
         class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
@@ -69,15 +69,14 @@
                 </div>
               </label>
               <select
-                v-model="formData.type"
+                v-model="form.type"
                 class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
                 required
               >
-                <option value="research">Investigación</option>
-                <option value="innovation">Innovación</option>
-                <option value="academic">Académico</option>
-                <option value="industry">Industria</option>
+                <option value="Academia de Ciencias de Cuba">Academia de Ciencias de Cuba</option>
+                <option value="CITMA Provincial">CITMA Provincial</option>
               </select>
+              <p v-if="form.errors.type" class="text-sm text-red-600 mt-1">{{ form.errors.type }}</p>
             </div>
 
             <!-- Fecha -->
@@ -90,28 +89,70 @@
               </label>
               <input
                 type="date"
-                v-model="formData.date"
+                v-model="form.date"
                 class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
                 required
               />
+              <p v-if="form.errors.date" class="text-sm text-red-600 mt-1">{{ form.errors.date }}</p>
             </div>
           </div>
 
-          <!-- Autores -->
+          <!-- Autores (combobox con búsqueda) -->
           <div class="space-y-1">
             <label class="block text-sm font-medium text-gray-700">
               <div class="flex items-center gap-2">
                 <UsersIcon :size="16" class="text-gray-500" />
-                Autores (Profesores) <span class="text-red-500">*</span>
+                Autores (Usuarios del sistema) <span class="text-red-500">*</span>
               </div>
             </label>
-            <input
-              type="text"
-              v-model="formData.authors"
-              class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
-              placeholder="Ingrese los autores separados por comas"
-              required
-            />
+            <!-- Chips seleccionados -->
+            <div v-if="form.authors.length" class="flex flex-wrap gap-2 mb-2">
+              <span v-for="id in form.authors" :key="id" class="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
+                {{ usersMap.get(id) ?? `ID ${id}` }}
+                <button type="button" class="text-blue-600 hover:text-blue-800" @click="removeUser(id)">
+                  <XIcon :size="14" />
+                </button>
+              </span>
+            </div>
+            <!-- Input de búsqueda -->
+            <div class="relative" ref="userComboboxRef">
+              <input
+                type="text"
+                v-model="userQuery"
+                @focus="showUserDropdown = true; ensureInitialSearch()"
+                @input="onUserQueryInput"
+                @keydown.esc.prevent="showUserDropdown = false"
+                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder="Buscar usuarios por nombre..."
+                autocomplete="off"
+              />
+              <!-- Dropdown resultados -->
+              <div v-if="showUserDropdown" class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                <div v-if="usersLoading" class="px-3 py-2 text-gray-500 text-sm">Cargando...</div>
+                <template v-else>
+                  <button
+                    v-for="u in searchResults"
+                    :key="u.id"
+                    type="button"
+                    class="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center justify-between"
+                    @click="selectUser(u)"
+                  >
+                    <span>{{ u.name }}</span>
+                    <span v-if="form.authors.includes(u.id)" class="text-xs text-green-600">Seleccionado</span>
+                  </button>
+                  <button
+                    v-if="nextUsersPageUrl"
+                    type="button"
+                    class="w-full text-center px-3 py-2 text-blue-600 hover:bg-blue-50 border-t"
+                    @click="loadMoreUsers"
+                  >
+                    Cargar más
+                  </button>
+                  <div v-if="!searchResults.length && !usersLoading" class="px-3 py-2 text-gray-500 text-sm">Sin resultados</div>
+                </template>
+              </div>
+            </div>
+            <p v-if="form.errors.authors" class="text-sm text-red-600 mt-1">{{ form.errors.authors }}</p>
           </div>
 
           <!-- Botones del formulario -->
@@ -125,7 +166,8 @@
             </button>
             <button
               type="submit"
-              class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              :disabled="form.processing"
+              class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
               {{ editingId ? 'Actualizar Premio' : 'Guardar Premio' }}
             </button>
@@ -191,12 +233,8 @@
               <!-- Autores -->
               <td class="px-6 py-4">
                 <div class="text-sm text-gray-900">
-                  <div v-if="award.authors && award.authors.length <= 2">
+                  <div v-if="award.authors && award.authors.length">
                     {{ award.authors.join(', ') }}
-                  </div>
-                  <div v-else-if="award.authors && award.authors.length > 2">
-                    {{ award.authors[0] }}
-                    <span class="text-gray-500">y {{ award.authors.length - 1 }} más</span>
                   </div>
                   <div v-else class="text-gray-400">Sin autores</div>
                 </div>
@@ -238,7 +276,8 @@
 
 <script setup>
 // Importaciones principales
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useForm, router, usePage } from '@inertiajs/vue3'
 import { 
   Plus as PlusIcon, 
   Edit2 as Edit2Icon, 
@@ -255,30 +294,21 @@ import {
   Users as UsersIcon 
 } from 'lucide-vue-next'
 
-// Datos mock iniciales
-const mockAwards = [
-  {
-    id: '1',
-    title: 'Best Research Paper Award',
-    name: 'Best Research Paper Award',
-    type: 'research',
-    date: '2024-02-15',
-    description: 'Awarded for groundbreaking research in quantum computing applications.',
-    authors: ['Dr. Juan Pérez', 'Dra. María García']
+// Props desde el padre (página Inertia)
+const props = defineProps({
+  awards: {
+    type: Array,
+    default: () => []
   },
-  {
-    id: '2',
-    title: 'Innovation Excellence Award',
-    name: 'Innovation Excellence Award',
-    type: 'innovation',
-    date: '2023-11-20',
-    description: 'Recognition for innovative solutions in sustainable technology.',
-    authors: ['Dr. Roberto Martínez']
+  users: {
+    type: Array,
+    default: () => []
   }
-]
+})
 
 // Estado reactivo
-const awards = ref([...mockAwards])
+// Creamos un estado local a partir de la prop para permitir ediciones locales
+const awards = ref([...(props.awards || [])])
 const showForm = ref(false)
 const editingId = ref(null)
 const searchQuery = ref('')
@@ -286,15 +316,30 @@ const sortField = ref('date')
 const sortDirection = ref('desc')
 const typeFilter = ref('all')
 
-// Datos del formulario
-const formData = ref({
-  type: 'research',
+// Obtener usuario actual
+const page = usePage()
+const currentUserId = page?.props?.auth?.user?.id ?? null
+const currentUserName = page?.props?.auth?.user?.name ?? null
+
+// Formulario con useForm (se envían type, date y authors)
+const form = useForm({
+  type: 'Academia de Ciencias de Cuba',
   date: '',
-  authors: ''
+  authors: currentUserId ? [currentUserId] : []
 })
 
-// Tipos de premios disponibles
-const awardTypes = ['all', 'research', 'innovation', 'academic', 'industry']
+// Campo local de autores ya controlado en form.authors; se elimina authorsInput
+
+// Sincroniza el estado local cuando cambian los premios recibidos por props (paginación)
+watch(
+  () => props.awards,
+  (newVal) => {
+    awards.value = [...(newVal || [])]
+  }
+)
+
+// Tipos de premios disponibles (para filtros)
+const awardTypes = ['all', 'Academia de Ciencias de Cuba', 'CITMA Provincial']
 
 // Computed: Lista filtrada y ordenada de premios
 const filteredAndSortedAwards = computed(() => {
@@ -304,8 +349,10 @@ const filteredAndSortedAwards = computed(() => {
       const nameMatch = (award.name || award.title || '').toLowerCase().includes(q)
       const descMatch = (award.description || '').toLowerCase().includes(q)
       const authorsMatch = Array.isArray(award.authors) && award.authors.some(a => a.toLowerCase().includes(q))
+      const typeMatch = String(award.type || '').toLowerCase().includes(q)
+      const dateMatch = String(award.date || '').toLowerCase().includes(q)
 
-      const matchesSearch = nameMatch || descMatch || authorsMatch
+      const matchesSearch = nameMatch || descMatch || authorsMatch || typeMatch || dateMatch
       const matchesType = typeFilter.value === 'all' || award.type === typeFilter.value
 
       return matchesSearch && matchesType
@@ -334,30 +381,40 @@ const handleSort = (field) => {
 
 // Maneja el envío del formulario (crear/editar)
 const handleSubmit = () => {
-  const payload = {
-    type: formData.value.type,
-    date: formData.value.date,
-    authors: formData.value.authors.split(',').map(a => a.trim()).filter(Boolean)
-  }
-
+  // Cerrar dropdown antes de enviar
+  showUserDropdown.value = false
   if (editingId.value) {
-    const index = awards.value.findIndex(a => a.id === editingId.value)
-    if (index !== -1) {
-      awards.value[index] = { ...awards.value[index], ...payload }
-    }
-  } else {
-    awards.value.push({ id: Date.now().toString(), ...payload })
+    form.put(route('awards.update', editingId.value), {
+      preserveScroll: true,
+      onSuccess: () => {
+        router.reload({ only: ['awards'] })
+        closeForm()
+      }
+    })
+    return
   }
 
-  closeForm()
+  form.post(route('awards.store'), {
+    preserveScroll: true,
+    onSuccess: () => {
+      router.reload({ only: ['awards'] })
+      closeForm()
+    }
+  })
 }
 
 // Maneja la edición de un premio
 const handleEdit = (award) => {
-  formData.value = {
-    type: award.type,
-    date: award.date,
-    authors: Array.isArray(award.authors) ? award.authors.join(', ') : (award.authors || '')
+  form.type = award.type
+  // Normalizar fecha a formato YYYY-MM-DD para el input date
+  form.date = award?.date ? String(award.date).slice(0, 10) : ''
+  // Cargar ids de autores
+  form.authors = Array.isArray(award.author_ids) ? [...award.author_ids] : []
+  // Poblar mapa de nombres desde el award si vienen alineados
+  if (Array.isArray(award.authors) && Array.isArray(award.author_ids) && award.authors.length === award.author_ids.length) {
+    for (let i = 0; i < award.author_ids.length; i++) {
+      usersMap.set(award.author_ids[i], award.authors[i])
+    }
   }
   editingId.value = award.id
   showForm.value = true
@@ -365,21 +422,114 @@ const handleEdit = (award) => {
 
 // Maneja la eliminación de un premio
 const handleDelete = (id) => {
-  if (confirm('Are you sure you want to delete this award?')) {
-    awards.value = awards.value.filter(a => a.id !== id)
-  }
+  if (!confirm('¿Seguro que deseas eliminar este premio?')) return
+
+  router.delete(route('awards.destroy', id), {
+    preserveScroll: true,
+    onSuccess: () => {
+      router.reload({ only: ['awards'] })
+    }
+  })
 }
 
 // Cierra el formulario y resetea el estado
 const closeForm = () => {
   showForm.value = false
   editingId.value = null
-  formData.value = {
-    type: 'research',
-    date: '',
-    authors: ''
+  form.reset()
+  form.clearErrors()
+  form.type = 'Academia de Ciencias de Cuba'
+  form.authors = currentUserId ? [currentUserId] : []
+  showUserDropdown.value = false
+}
+
+// ========== Autocomplete de usuarios ==========
+const userQuery = ref('')
+const usersLoading = ref(false)
+const searchResults = ref([])
+const showUserDropdown = ref(false)
+const nextUsersPageUrl = ref(null)
+const usersMap = new Map()
+const userComboboxRef = ref(null)
+
+// Semilla inicial del mapa con props.users y usuario actual
+if (Array.isArray(props.users)) {
+  props.users.forEach(u => usersMap.set(u.id, u.name))
+}
+if (currentUserId && currentUserName) {
+  usersMap.set(currentUserId, currentUserName)
+}
+
+let userSearchDebounce = null
+const onUserQueryInput = () => {
+  if (userSearchDebounce) clearTimeout(userSearchDebounce)
+  userSearchDebounce = setTimeout(() => {
+    fetchUsers(userQuery.value)
+  }, 300)
+}
+
+const ensureInitialSearch = () => {
+  if (!searchResults.value.length && !usersLoading.value) {
+    fetchUsers('')
   }
 }
+
+const fetchUsers = async (q = '', url = null) => {
+  try {
+    usersLoading.value = true
+    const endpoint = url || route('users.search', { q, per_page: 15 })
+    const res = await fetch(endpoint)
+    const data = await res.json()
+    if (!url) {
+      searchResults.value = data.data || []
+    } else {
+      searchResults.value = [...searchResults.value, ...(data.data || [])]
+    }
+    // Poblar mapa de nombres
+    ;(data.data || []).forEach(u => usersMap.set(u.id, u.name))
+    nextUsersPageUrl.value = data.next_page_url
+  } catch (e) {
+    // noop
+  } finally {
+    usersLoading.value = false
+  }
+}
+
+const loadMoreUsers = () => {
+  if (nextUsersPageUrl.value) {
+    fetchUsers(userQuery.value, nextUsersPageUrl.value)
+  }
+}
+
+const selectUser = (user) => {
+  if (!form.authors.includes(user.id)) {
+    form.authors.push(user.id)
+    usersMap.set(user.id, user.name)
+  }
+  // Mantener abierto o cerrar; cerramos para evitar bloquear la UI
+  showUserDropdown.value = false
+}
+
+const removeUser = (id) => {
+  form.authors = form.authors.filter(a => a !== id)
+}
+
+// Cierre por clic fuera
+const handleClickOutside = (e) => {
+  if (!showUserDropdown.value) return
+  const el = userComboboxRef.value
+  if (el && !el.contains(e.target)) {
+    showUserDropdown.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', handleClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleClickOutside)
+})
 
 // Formatea una fecha para mostrar
 const formatDate = (dateString) => {
@@ -389,21 +539,17 @@ const formatDate = (dateString) => {
 // Obtiene las clases CSS para el badge del tipo de premio
 const getTypeBadgeClasses = (type) => {
   const colors = {
-    research: 'bg-purple-100 text-purple-800',
-    innovation: 'bg-blue-100 text-blue-800',
-    academic: 'bg-green-100 text-green-800',
-    industry: 'bg-orange-100 text-orange-800'
+    'Academia de Ciencias de Cuba': 'bg-purple-100 text-purple-800',
+    'CITMA Provincial': 'bg-blue-100 text-blue-800',
   }
-  return `px-2 py-1 rounded-full text-xs font-medium ${colors[type]}`
+  return `px-2 py-1 rounded-full text-xs font-medium ${colors[type] || 'bg-gray-100 text-gray-800'}`
 }
 
 // Traducción de tipo
 const getTypeLabel = (type) => {
   const labels = {
-    research: 'Investigación',
-    innovation: 'Innovación',
-    academic: 'Académico',
-    industry: 'Industria'
+    'Academia de Ciencias de Cuba': 'Academia de Ciencias de Cuba',
+    'CITMA Provincial': 'CITMA Provincial',
   }
   return labels[type] || type
 }
