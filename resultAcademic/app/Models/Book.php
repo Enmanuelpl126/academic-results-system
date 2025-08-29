@@ -18,6 +18,7 @@ class Book extends Model
 
     public function publication(): BelongsTo
     {
-        return $this->belongsTo(Publication::class);
+        // Clave compartida: books.id = publications.id
+        return $this->belongsTo(Publication::class, 'id', 'id');
     }
 }

@@ -26,7 +26,8 @@ class Publication extends Model
 
     public function magazine(): HasOne
     {
-        return $this->hasOne(Magazine::class);
+        // Relación 1:1 con clave compartida (magazines.id = publications.id)
+        return $this->hasOne(Magazine::class, 'id', 'id');
     }
 
     /**
@@ -34,7 +35,8 @@ class Publication extends Model
      */
     public function book(): HasOne
     {
-        return $this->hasOne(Book::class);
+        // Relación 1:1 con clave compartida (books.id = publications.id)
+        return $this->hasOne(Book::class, 'id', 'id');
     }
 
     /**
@@ -42,7 +44,8 @@ class Publication extends Model
      */
     public function chapter(): HasOne
     {
-        return $this->hasOne(Chapter::class);
+        // Relación 1:1 con clave compartida (chapters.id = publications.id)
+        return $this->hasOne(Chapter::class, 'id', 'id');
     }
 
     /**

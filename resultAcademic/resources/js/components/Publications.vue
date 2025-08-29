@@ -33,9 +33,9 @@
             class="w-full sm:w-auto border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">Todos los Tipos</option>
-            <option value="journal">Revista</option>
-            <option value="book">Libro</option>
-            <option value="book_chapter">Capítulo de Libro</option>
+            <option value="Revista">Revista</option>
+            <option value="Libro">Libro</option>
+            <option value="Capitulo de Libro">Capítulo de Libro</option>
           </select>
           <select
             v-model="yearFilter"
@@ -101,16 +101,58 @@
               <label class="block text-sm font-medium text-gray-700">
                 <div class="flex items-center gap-2">
                   <UsersIcon :size="16" class="text-gray-500" />
-                  Autores (Profesores) <span class="text-red-500">*</span>
+                  Autores (Usuarios del sistema) <span class="text-red-500">*</span>
                 </div>
               </label>
-              <input
-                type="text"
-                v-model="formData.authors"
-                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                placeholder="Ingrese los autores (separados por comas)"
-                required
-              />
+              <!-- Chips seleccionados -->
+              <div v-if="selectedAuthors.length" class="flex flex-wrap gap-2 mb-2">
+                <span v-for="id in selectedAuthors" :key="id" class="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
+                  {{ usersMap.get(id) ?? `ID ${id}` }}
+                  <button type="button" class="text-blue-600 hover:text-blue-800" @click="removeUser(id)">
+                    <XIcon :size="14" />
+                  </button>
+                </span>
+              </div>
+              <!-- Input de búsqueda -->
+              <div class="relative" ref="userComboboxRef">
+                <input
+                  type="text"
+                  v-model="userQuery"
+                  @focus="showUserDropdown = true; ensureInitialSearch()"
+                  @input="onUserQueryInput"
+                  @keydown.esc.prevent="showUserDropdown = false"
+                  @keydown.tab.prevent="handleUserTabAway"
+                  @blur="handleUserInputBlur"
+                  class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                  placeholder="Buscar usuarios por nombre..."
+                  autocomplete="off"
+                />
+                <!-- Dropdown resultados -->
+                <div v-if="showUserDropdown" class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                  <div v-if="usersLoading" class="px-3 py-2 text-gray-500 text-sm">Cargando...</div>
+                  <template v-else>
+                    <button
+                      v-for="u in searchResults"
+                      :key="u.id"
+                      type="button"
+                      class="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center justify-between"
+                      @mousedown.prevent="selectUser(u)"
+                    >
+                      <span>{{ u.name }}</span>
+                      <span v-if="selectedAuthors.includes(u.id)" class="text-xs text-green-600">Seleccionado</span>
+                    </button>
+                    <button
+                      v-if="nextUsersPageUrl"
+                      type="button"
+                      class="w-full text-center px-3 py-2 text-blue-600 hover:bg-blue-50 border-t"
+                      @click="loadMoreUsers"
+                    >
+                      Cargar más
+                    </button>
+                    <div v-if="!searchResults.length && !usersLoading" class="px-3 py-2 text-gray-500 text-sm">Sin resultados</div>
+                  </template>
+                </div>
+              </div>
             </div>
 
             <div class="space-y-1">
@@ -165,10 +207,46 @@
       @delete="handleDelete"
     />
   </div>
+
+  <!-- Modal de confirmación de eliminación (igual a Awards.vue en estructura y textos) -->
+  <div
+    v-if="showDeleteModal"
+    class="fixed inset-0 z-50 flex items-center justify-center"
+    aria-modal="true"
+    role="dialog"
+  >
+    <!-- Overlay -->
+    <div
+      class="absolute inset-0 bg-black/40"
+      @click.self="closeDeleteModal"
+    ></div>
+    <!-- Contenido del modal -->
+    <div class="relative z-10 w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+      <div class="flex items-start gap-3">
+        <div class="flex-1">
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Confirmar eliminación</h3>
+          <p class="text-sm text-gray-600 mb-3">
+            ¿Seguro que deseas eliminar esta publicación?
+          </p>
+          <div v-if="publicationToDelete" class="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <div v-if="publicationToDelete.name"><span class="font-medium text-gray-900">Nombre:</span> {{ publicationToDelete.name }}</div>
+            <div v-if="publicationToDelete.type"><span class="font-medium text-gray-900">Tipo:</span> {{ publicationToDelete.type }}</div>
+            <div v-if="publicationToDelete.date"><span class="font-medium text-gray-900">Fecha:</span> {{ formatDate(publicationToDelete.date) }}</div>
+            <div v-if="publicationToDelete.authors && publicationToDelete.authors.length"><span class="font-medium text-gray-900">Autores:</span> {{ publicationToDelete.authors.join(', ') }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end gap-3">
+        <button type="button" @click="closeDeleteModal" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Cancelar</button>
+        <button type="button" @click="confirmDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { usePage, router } from '@inertiajs/vue3'
 import { 
   Plus as PlusIcon, 
   X as XIcon, 
@@ -180,23 +258,23 @@ import {
 import PublicationTypeFields from './PublicationTypeFields.vue'
 import PublicationsTable from './PublicationsTable.vue'
 
-// Datos mock
-const mockPublications = [
-  {
-    id: '1',
-    name: 'Técnicas Avanzadas de Aprendizaje Automático en Computación Cuántica',
-    date: '2024-02-15',
-    authors: ['Dr. Juan Pérez', 'Dra. María García', 'Dr. Roberto Martínez'],
-    type: 'journal',
-    number: '3',
-    volume: '15',
-    doi: '10.1234/jqc.2024.1234',
-    url: 'https://example.com/journal/article'
+// Props y estado desde Inertia (backend)
+const props = defineProps({
+  users: {
+    type: Array,
+    default: () => []
   }
-]
-
-// Estado reactivo
-const publications = ref([...mockPublications])
+})
+const page = usePage()
+const publications = ref(page?.props?.publications?.data ?? [])
+// Sincronizar cuando cambie la paginación/datos en props
+watch(
+  () => page?.props?.publications,
+  (val) => {
+    publications.value = val?.data ?? []
+  },
+  { immediate: false }
+)
 const showForm = ref(false)
 const editingId = ref(null)
 const searchQuery = ref('')
@@ -208,15 +286,14 @@ const yearFilter = ref('all')
 const formData = ref({
   name: '',
   date: '',
-  authors: '',
+  // authorIds gestionado aparte
   type: 'journal',
+  magazineName: '',
   number: '',
   volume: '',
-  url: '',
   doi: '',
   publisher: '',
   city: '',
-  chapterName: '',
   bookName: '',
   bookAuthor: ''
 })
@@ -261,67 +338,228 @@ const handleSort = (field) => {
   }
 }
 
+// ====== Autores: estado y lógica básica para el combobox ======
+const currentUserId = page?.props?.auth?.user?.id ?? null
+const currentUserName = page?.props?.auth?.user?.name ?? null
+const authorIds = ref([])
+const selectedAuthors = computed(() => authorIds.value || [])
+
+// Mapa id -> nombre para chips
+const usersMap = new Map()
+
+// Estado del combobox
+const userQuery = ref('')
+const showUserDropdown = ref(false)
+const usersLoading = ref(false)
+const searchResults = ref(Array.isArray(props.users) ? [...props.users] : [])
+const nextUsersPageUrl = ref(null)
+const userComboboxRef = ref(null)
+
+// Inicializa resultados si están vacíos al enfocar
+const ensureInitialSearch = () => {
+  if (!searchResults.value?.length && Array.isArray(props.users)) {
+    searchResults.value = [...props.users]
+  }
+}
+
+// Búsqueda local simple sobre props.users (fallback rápido)
+const onUserQueryInput = () => {
+  const q = userQuery.value?.toLowerCase?.() ?? ''
+  if (!q) {
+    searchResults.value = Array.isArray(props.users) ? [...props.users] : []
+    return
+  }
+  const base = Array.isArray(props.users) ? props.users : []
+  searchResults.value = base.filter(u => (u.name || '').toLowerCase().includes(q))
+}
+
+const selectUser = (u) => {
+  if (!u || u.id == null) return
+  if (!authorIds.value.includes(u.id)) {
+    authorIds.value = [...authorIds.value, u.id]
+  }
+  if (u.name) usersMap.set(u.id, u.name)
+  showUserDropdown.value = false
+  // Limpiar la búsqueda y quitar foco del input para evitar comportamientos raros
+  userQuery.value = ''
+  // Restaurar resultados por defecto
+  searchResults.value = Array.isArray(props.users) ? [...props.users] : []
+  nextTick(() => {
+    const el = userComboboxRef.value?.querySelector('input')
+    if (el && typeof el.blur === 'function') {
+      el.blur()
+    }
+  })
+}
+
+const removeUser = (id) => {
+  authorIds.value = authorIds.value.filter(x => x !== id)
+}
+
+const loadMoreUsers = () => {
+  // Placeholder: si más adelante hay API, aquí se implementa la paginación
+  nextUsersPageUrl.value = null
+}
+
+const handleUserInputBlur = () => {
+  // Si el blur no proviene de seleccionar (cubierto por mousedown), limpiar
+  showUserDropdown.value = false
+  userQuery.value = ''
+  searchResults.value = Array.isArray(props.users) ? [...props.users] : []
+}
+
+const handleUserTabAway = () => {
+  showUserDropdown.value = false
+  userQuery.value = ''
+  searchResults.value = Array.isArray(props.users) ? [...props.users] : []
+  // dejar que el tab continúe hacia el siguiente elemento
+}
+
+// Cerrar dropdown al hacer click fuera del combobox
+let __onDocPointer = null
+let __onDocFocus = null
+onMounted(() => {
+  // Prefijar el usuario autenticado como autor por defecto
+  if (currentUserId != null) {
+    authorIds.value = [currentUserId]
+    const fromProps = Array.isArray(props.users) ? props.users.find(u => u.id === currentUserId) : null
+    const name = fromProps?.name || currentUserName || `ID ${currentUserId}`
+    usersMap.set(currentUserId, name)
+  }
+  __onDocPointer = (e) => {
+    const el = userComboboxRef.value
+    if (!el) return
+    if (!el.contains(e.target)) {
+      showUserDropdown.value = false
+    }
+  }
+  __onDocFocus = __onDocPointer
+  document.addEventListener('mousedown', __onDocPointer)
+  document.addEventListener('touchstart', __onDocPointer, { passive: true })
+  document.addEventListener('focusin', __onDocFocus)
+})
+
+onBeforeUnmount(() => {
+  if (__onDocPointer) {
+    document.removeEventListener('mousedown', __onDocPointer)
+    document.removeEventListener('touchstart', __onDocPointer)
+  }
+  if (__onDocFocus) {
+    document.removeEventListener('focusin', __onDocFocus)
+  }
+  __onDocPointer = null
+  __onDocFocus = null
+})
+
+// Utilidad para formatear fecha como DD-MM-YYYY, similar a Awards.vue
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const s = String(dateString).slice(0, 10)
+  const [y, m, d] = s.split('-')
+  return (y && m && d) ? `${d}-${m}-${y}` : dateString
+}
+
 const handleSubmit = () => {
-  const publication = {
-    id: editingId.value || Date.now().toString(),
+  // Construir payload para backend
+  const payload = {
     name: formData.value.name,
     date: formData.value.date,
-    authors: formData.value.authors.split(',').map(author => author.trim()),
-    type: formData.value.type,
-    ...(formData.value.type === 'journal' && {
+    type: formData.value.type, // backend normaliza a español
+    author_ids: authorIds.value.length ? [...authorIds.value] : undefined
+  }
+
+  if (formData.value.type === 'journal') {
+    Object.assign(payload, {
+      magazineName: formData.value.magazineName,
       number: formData.value.number,
       volume: formData.value.volume,
-      url: formData.value.url || undefined,
       doi: formData.value.doi || undefined
-    }),
-    ...(formData.value.type === 'book' && {
+    })
+  } else if (formData.value.type === 'book') {
+    Object.assign(payload, {
       publisher: formData.value.publisher,
       city: formData.value.city
-    }),
-    ...(formData.value.type === 'book_chapter' && {
-      chapterName: formData.value.chapterName,
+    })
+  } else if (formData.value.type === 'book_chapter') {
+    Object.assign(payload, {
       bookName: formData.value.bookName,
       bookAuthor: formData.value.bookAuthor,
-      publisher: formData.value.publisher
+      publisher: formData.value.publisher,
+      city: formData.value.city
     })
   }
 
   if (editingId.value) {
-    const index = publications.value.findIndex(p => p.id === editingId.value)
-    if (index !== -1) {
-      publications.value[index] = publication
-    }
+    router.put(`/publications/${editingId.value}`, payload, {
+      onSuccess: () => {
+        closeForm()
+      }
+    })
   } else {
-    publications.value.push(publication)
+    router.post('/publications', payload, {
+      onSuccess: () => {
+        closeForm()
+      }
+    })
   }
-
-  closeForm()
 }
 
 const handleEdit = (publication) => {
   formData.value = {
     name: publication.name,
     date: publication.date,
-    authors: publication.authors.join(', '),
-    type: publication.type,
+    // Mapear tipo del listado (español) a lo que requiere el formulario (inglés)
+    type: publication.type === 'Revista' ? 'journal' : publication.type === 'Libro' ? 'book' : 'book_chapter',
+    magazineName: publication.magazineName || '',
     number: publication.number || '',
     volume: publication.volume || '',
-    url: publication.url || '',
     doi: publication.doi || '',
     publisher: publication.publisher || '',
     city: publication.city || '',
-    chapterName: publication.chapterName || '',
     bookName: publication.bookName || '',
     bookAuthor: publication.bookAuthor || ''
+  }
+  // Cargar ids y nombres de autores
+  authorIds.value = Array.isArray(publication.author_ids) ? [...publication.author_ids] : []
+  if (Array.isArray(publication.authors) && Array.isArray(publication.author_ids) && publication.authors.length === publication.author_ids.length) {
+    for (let i = 0; i < publication.author_ids.length; i++) {
+      usersMap.set(publication.author_ids[i], publication.authors[i])
+    }
   }
   editingId.value = publication.id
   showForm.value = true
 }
 
+// Estado y lógica para modal de eliminación (alineado con Awards.vue)
+const showDeleteModal = ref(false)
+const publicationToDelete = ref(null)
+
+const openDeleteModal = (publication) => {
+  publicationToDelete.value = publication || null
+  showDeleteModal.value = !!publicationToDelete.value
+}
+
+// El handler que recibe el id desde la tabla abre el modal buscando la publicación
 const handleDelete = (id) => {
-  if (confirm('¿Está seguro de que desea eliminar esta publicación?')) {
-    publications.value = publications.value.filter(p => p.id !== id)
-  }
+  if (!id) return
+  const pub = publications.value.find(p => p.id === id)
+  openDeleteModal(pub)
+}
+
+const confirmDelete = () => {
+  if (!publicationToDelete.value) return
+  const id = publicationToDelete.value.id
+  router.delete(`/publications/${id}`, {
+    onSuccess: () => {
+      publications.value = publications.value.filter(p => p.id !== id)
+      closeDeleteModal()
+    }
+  })
+}
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+  publicationToDelete.value = null
 }
 
 const closeForm = () => {
@@ -330,17 +568,24 @@ const closeForm = () => {
   formData.value = {
     name: '',
     date: '',
-    authors: '',
     type: 'journal',
+    magazineName: '',
     number: '',
     volume: '',
-    url: '',
     doi: '',
     publisher: '',
     city: '',
-    chapterName: '',
     bookName: '',
     bookAuthor: ''
+  }
+  // Reiniciar selección de autores al usuario actual si existe
+  if (currentUserId != null) {
+    authorIds.value = [currentUserId]
+    const fromProps = Array.isArray(props.users) ? props.users.find(u => u.id === currentUserId) : null
+    const name = fromProps?.name || currentUserName || `ID ${currentUserId}`
+    usersMap.set(currentUserId, name)
+  } else {
+    authorIds.value = []
   }
 }
 </script>

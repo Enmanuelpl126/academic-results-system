@@ -20,6 +20,7 @@ class Magazine extends Model
 
     public function publication(): BelongsTo
     {
-        return $this->belongsTo(Publication::class);
+        // Clave compartida: magazines.id = publications.id
+        return $this->belongsTo(Publication::class, 'id', 'id');
     }
 }

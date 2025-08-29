@@ -101,38 +101,34 @@
             <!-- Autores -->
             <td class="px-6 py-4">
               <div class="text-sm text-gray-900">
-                <div v-if="publication.authors.length <= 2">
-                  {{ publication.authors.join(', ') }}
-                </div>
-                <div v-else>
-                  {{ publication.authors[0] }}
-                  <span class="text-gray-500">y {{ publication.authors.length - 1 }} más</span>
-                </div>
+                {{ Array.isArray(publication.authors) ? publication.authors.join(', ') : '' }}
               </div>
             </td>
 
             <!-- Detalles específicos por tipo -->
             <td class="px-6 py-4">
-              <div class="text-sm text-gray-600 space-y-1">
-                <!-- Journal -->
-                <div v-if="publication.type === 'journal'">
+              <div class="text-sm text-gray-600 space-y-1 whitespace-normal break-words">
+                <!-- Revista -->
+                <div v-if="publication.type === 'Revista'">
+                  <div class="font-medium">{{ publication.magazineName }}</div>
                   <div>Vol. {{ publication.volume }}, No. {{ publication.number }}</div>
                   <div v-if="publication.doi" class="text-xs text-blue-600">
                     DOI: {{ publication.doi }}
                   </div>
                 </div>
                 
-                <!-- Book -->
-                <div v-else-if="publication.type === 'book'">
+                <!-- Libro -->
+                <div v-else-if="publication.type === 'Libro'">
                   <div>{{ publication.publisher }}</div>
                   <div class="text-xs">{{ publication.city }}</div>
                 </div>
                 
-                <!-- Book Chapter -->
-                <div v-else-if="publication.type === 'book_chapter'">
-                  <div class="font-medium">{{ publication.chapterName }}</div>
+                <!-- Capítulo de Libro -->
+                <div v-else-if="publication.type === 'Capitulo de Libro'">
                   <div class="text-xs">En: {{ publication.bookName }}</div>
-                  <div class="text-xs">{{ publication.publisher }}</div>
+                  <div class="text-xs">Autor del Libro: {{ publication.bookAuthor }}</div>
+                  <div class="text-xs">Editorial: {{ publication.publisher }}</div>
+                  <div class="text-xs" v-if="publication.city">Ciudad: {{ publication.city }}</div>
                 </div>
               </div>
             </td>
@@ -219,18 +215,18 @@ const emit = defineEmits(['sort', 'edit', 'delete'])
 // Métodos
 const getTypeLabel = (type) => {
   const labels = {
-    journal: 'Revista',
-    book: 'Libro',
-    book_chapter: 'Capítulo'
+    'Revista': 'Revista',
+    'Libro': 'Libro',
+    'Capitulo de Libro': 'Capítulo'
   }
   return labels[type] || type
 }
 
 const getTypeBadgeClass = (type) => {
   const classes = {
-    journal: 'bg-blue-100 text-blue-800',
-    book: 'bg-green-100 text-green-800',
-    book_chapter: 'bg-purple-100 text-purple-800'
+    'Revista': 'bg-blue-100 text-blue-800',
+    'Libro': 'bg-green-100 text-green-800',
+    'Capitulo de Libro': 'bg-purple-100 text-purple-800'
   }
   return classes[type] || 'bg-gray-100 text-gray-800'
 }

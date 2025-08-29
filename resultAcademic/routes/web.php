@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AwardController;
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -34,11 +36,24 @@ Route::get('/users/search', [UserController::class, 'search'])
     ->name('users.search');
 
 Route::inertia('/recognitions', 'Recognitions')->name('recognitions');
-Route::inertia('/publications', 'Publications')->name('publications');
+Route::get('/publications', [PublicationController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('publications');
+Route::post('/publications', [PublicationController::class, 'store'])
+    ->middleware(['auth', 'verified'])
+    ->name('publications.store');
 
-Route::get('/events', function () {
-    return Inertia::render('Events');
-})->name('events');
+Route::put('/publications/{publication}', [PublicationController::class, 'update'])
+    ->middleware(['auth', 'verified'])
+    ->name('publications.update');
+
+Route::delete('/publications/{publication}', [PublicationController::class, 'destroy'])
+    ->middleware(['auth', 'verified'])
+    ->name('publications.destroy');
+
+Route::get('/events', [EventController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('events');
 
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');

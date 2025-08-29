@@ -20,6 +20,7 @@ class Chapter extends Model
 
     public function publication(): BelongsTo
     {
-        return $this->belongsTo(Publication::class);
+        // Clave compartida: chapters.id = publications.id
+        return $this->belongsTo(Publication::class, 'id', 'id');
     }
 }

@@ -213,34 +213,16 @@ import {
   UserCircle as UserCircleIcon 
 } from 'lucide-vue-next'
 
-// Datos mock iniciales
-const mockEvents = [
-  {
-    id: '1',
-    name: 'International Conference on Quantum Computing',
-    type: 'conference',
-    role: 'speaker',
-    location: 'Berlin, Germany',
-    authors: 'A. Einstein, N. Bohr',
-    category: 'Conference',
-    date: '2024-06-15',
-    description: 'Presenting research findings on quantum computing applications in machine learning.'
-  },
-  {
-    id: '2',
-    name: 'Advanced AI Workshop',
-    type: 'workshop',
-    role: 'organizer',
-    location: 'San Francisco, USA',
-    authors: 'G. Hinton, Y. LeCun',
-    category: 'Workshop',
-    date: '2024-04-20',
-    description: 'Leading a workshop on the latest developments in artificial intelligence.'
+// Props recibidas desde la página Inertia
+const props = defineProps({
+  initialEvents: {
+    type: Array,
+    default: () => []
   }
-]
+})
 
-// Estado reactivo
-const events = ref([...mockEvents])
+// Estado reactivo: usar props.initialEvents; si vienen vacíos puedes cargar valores por defecto si lo deseas
+const events = ref([...(props.initialEvents || [])])
 const showForm = ref(false)
 const editingId = ref(null)
 const searchQuery = ref('')

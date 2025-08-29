@@ -6,6 +6,22 @@
       <div class="space-y-1">
         <label class="block text-sm font-medium text-gray-700">
           <div class="flex items-center gap-2">
+            <BookOpenIcon :size="16" class="text-gray-500" />
+            Nombre de la Revista <span class="text-red-500">*</span>
+          </div>
+        </label>
+        <input
+          type="text"
+          :value="modelValue.magazineName"
+          @input="updateField('magazineName', $event.target.value)"
+          class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+          placeholder="Nombre de la revista"
+          required
+        />
+      </div>
+      <div class="space-y-1">
+        <label class="block text-sm font-medium text-gray-700">
+          <div class="flex items-center gap-2">
             <HashIcon :size="16" class="text-gray-500" />
             Número <span class="text-red-500">*</span>
           </div>
@@ -37,21 +53,7 @@
         />
       </div>
 
-      <div class="space-y-1">
-        <label class="block text-sm font-medium text-gray-700">
-          <div class="flex items-center gap-2">
-            <LinkIcon :size="16" class="text-gray-500" />
-            URL (Opcional)
-          </div>
-        </label>
-        <input
-          type="url"
-          :value="modelValue.url"
-          @input="updateField('url', $event.target.value)"
-          class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
-          placeholder="https://ejemplo.com/articulo"
-        />
-      </div>
+      
 
       <div class="space-y-1">
         <label class="block text-sm font-medium text-gray-700">
@@ -113,23 +115,6 @@
         <div class="space-y-1">
           <label class="block text-sm font-medium text-gray-700">
             <div class="flex items-center gap-2">
-              <FileTextIcon :size="16" class="text-gray-500" />
-              Nombre del Capítulo <span class="text-red-500">*</span>
-            </div>
-          </label>
-          <input
-            type="text"
-            :value="modelValue.chapterName"
-            @input="updateField('chapterName', $event.target.value)"
-            class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
-            placeholder="Título del capítulo"
-            required
-          />
-        </div>
-
-        <div class="space-y-1">
-          <label class="block text-sm font-medium text-gray-700">
-            <div class="flex items-center gap-2">
               <BookOpenIcon :size="16" class="text-gray-500" />
               Nombre del Libro <span class="text-red-500">*</span>
             </div>
@@ -180,6 +165,25 @@
           />
         </div>
       </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-1">
+          <label class="block text-sm font-medium text-gray-700">
+            <div class="flex items-center gap-2">
+              <MapPinIcon :size="16" class="text-gray-500" />
+              Ciudad <span class="text-red-500">*</span>
+            </div>
+          </label>
+          <input
+            type="text"
+            :value="modelValue.city"
+            @input="updateField('city', $event.target.value)"
+            class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+            placeholder="Ciudad de publicación"
+            required
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -188,7 +192,6 @@
 import { 
   Hash as HashIcon,
   Book as BookIcon,
-  Link as LinkIcon,
   FileText as FileTextIcon,
   Building as BuildingIcon,
   MapPin as MapPinIcon,

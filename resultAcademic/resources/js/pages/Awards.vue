@@ -3,8 +3,8 @@
   <div class="space-y-6">
     <Awards :awards="awards?.data ?? []" :users="users ?? []" />
 
-    <!-- Paginación -->
-    <nav v-if="awards && awards.links" class="flex flex-wrap gap-2 items-center">
+    <!-- Paginación (sin contenedor extra) -->
+    <nav v-if="awards && awards.links" class="flex flex-wrap gap-2 items-center px-6 py-3">
       <Link
         v-for="link in awards.links"
         :key="link.url + (link.label || '')"

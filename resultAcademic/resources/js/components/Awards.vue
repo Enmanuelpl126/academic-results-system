@@ -251,7 +251,7 @@
                     <Edit2Icon :size="16" />
                   </button>
                   <button
-                    @click="handleDelete(award.id)"
+                    @click="openDeleteModal(award)"
                     class="text-red-600 hover:text-red-900 transition-colors"
                     title="Eliminar premio"
                   >
@@ -260,18 +260,52 @@
                 </div>
               </td>
             </tr>
+            <!-- Estado vacío cuando no hay resultados -->
+            <tr v-if="!filteredAndSortedAwards.length">
+              <td colspan="4" class="px-6 py-6 text-center text-gray-500">
+                No hay premios que coincidan con el criterio de búsqueda
+                <span v-if="searchQuery">: "{{ searchQuery }}"</span>.
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
+  </div>
+</div>
 
-      <!-- Estado vacío -->
-      <div v-if="filteredAndSortedAwards.length === 0" class="text-center py-12">
-        <TrophyIcon :size="48" class="mx-auto text-gray-400 mb-4" />
-        <h3 class="text-lg font-medium text-gray-900 mb-2">No hay premios</h3>
-        <p class="text-gray-500">Comience agregando su primer premio.</p>
+<!-- Modal de confirmación de eliminación -->
+<div
+  v-if="showDeleteModal"
+  class="fixed inset-0 z-50 flex items-center justify-center"
+  aria-modal="true"
+  role="dialog"
+>
+  <!-- Overlay -->
+  <div
+    class="absolute inset-0 bg-black/40"
+    @click.self="closeDeleteModal"
+  ></div>
+  <!-- Contenido del modal -->
+  <div class="relative z-10 w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+    <div class="flex items-start gap-3">
+      <div class="flex-1">
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Confirmar eliminación</h3>
+        <p class="text-sm text-gray-600 mb-3">
+          ¿Seguro que deseas eliminar este premio?
+        </p>
+        <div v-if="awardToDelete" class="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">
+          <div><span class="font-medium text-gray-900">Tipo:</span> {{ awardToDelete.type }}</div>
+          <div><span class="font-medium text-gray-900">Fecha:</span> {{ formatDate(awardToDelete.date) }}</div>
+          <div v-if="awardToDelete.authors && awardToDelete.authors.length"><span class="font-medium text-gray-900">Autores:</span> {{ awardToDelete.authors.join(', ') }}</div>
+        </div>
       </div>
     </div>
+    <div class="mt-6 flex justify-end gap-3">
+      <button type="button" @click="closeDeleteModal" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Cancelar</button>
+      <button type="button" @click="confirmDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+    </div>
   </div>
+</div>
 </template>
 
 <script setup>
@@ -420,16 +454,33 @@ const handleEdit = (award) => {
   showForm.value = true
 }
 
-// Maneja la eliminación de un premio
-const handleDelete = (id) => {
-  if (!confirm('¿Seguro que deseas eliminar este premio?')) return
+// Estado y lógica para modal de eliminación
+const showDeleteModal = ref(false)
+const awardToDelete = ref(null)
 
+const openDeleteModal = (award) => {
+  awardToDelete.value = award
+  showDeleteModal.value = true
+}
+
+const confirmDelete = () => {
+  if (!awardToDelete.value) return
+  const id = awardToDelete.value.id
   router.delete(route('awards.destroy', id), {
     preserveScroll: true,
     onSuccess: () => {
       router.reload({ only: ['awards'] })
+      closeDeleteModal()
+    },
+    onFinish: () => {
+      // Asegurar cierre incluso si hay error (podemos mantener abierto si prefieres)
     }
   })
+}
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+  awardToDelete.value = null
 }
 
 // Cierra el formulario y resetea el estado
@@ -523,17 +574,31 @@ const handleClickOutside = (e) => {
   }
 }
 
+const handleGlobalKeydown = (e) => {
+  if (e.key === 'Escape' && showDeleteModal.value) {
+    closeDeleteModal()
+  }
+}
+
 onMounted(() => {
   document.addEventListener('mousedown', handleClickOutside)
+  document.addEventListener('keydown', handleGlobalKeydown)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('mousedown', handleClickOutside)
+  document.removeEventListener('keydown', handleGlobalKeydown)
 })
 
-// Formatea una fecha para mostrar
+// Formatea fecha como DD-MM-YYYY evitando timezone
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString()
+  if (!dateString) return ''
+  // Tomar solo la parte de fecha (YYYY-MM-DD)
+  const s = String(dateString).slice(0, 10)
+  const [y, m, d] = s.split('-')
+  if (y && m && d) return `${d}-${m}-${y}`
+  // Fallback
+  return dateString
 }
 
 // Obtiene las clases CSS para el badge del tipo de premio
