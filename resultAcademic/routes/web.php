@@ -3,6 +3,7 @@
 use App\Http\Controllers\AwardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\PublicationController;
+use App\Http\Controllers\RecognitionController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -35,7 +36,18 @@ Route::get('/users/search', [UserController::class, 'search'])
     ->middleware(['auth', 'verified'])
     ->name('users.search');
 
-Route::inertia('/recognitions', 'Recognitions')->name('recognitions');
+Route::get('/recognitions', [RecognitionController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('recognitions');
+Route::post('/recognitions', [RecognitionController::class, 'store'])
+    ->middleware(['auth', 'verified'])
+    ->name('recognitions.store');
+Route::put('/recognitions/{id}', [RecognitionController::class, 'update'])
+    ->middleware(['auth', 'verified'])
+    ->name('recognitions.update');
+Route::delete('/recognitions/{id}', [RecognitionController::class, 'destroy'])
+    ->middleware(['auth', 'verified'])
+    ->name('recognitions.destroy');
 Route::get('/publications', [PublicationController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('publications');

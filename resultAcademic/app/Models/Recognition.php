@@ -18,6 +18,10 @@ class Recognition extends Model
         'description'
     ];
 
+    protected $casts = [
+        'date' => 'date',
+    ];
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class);

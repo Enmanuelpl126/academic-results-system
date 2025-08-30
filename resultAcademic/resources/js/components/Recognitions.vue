@@ -1,11 +1,11 @@
 <template>
   <!-- Contenedor principal de la página de reconocimientos -->
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-8">
     <!-- Encabezado con título y botón de agregar -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
       <h2 class="text-2xl font-bold text-gray-900">Recognitions & Honors</h2>
       <button
-        @click="showForm = true"
+        @click="openCreateForm"
         class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
       >
         <PlusIcon :size="20" />
@@ -105,11 +105,12 @@
             </label>
             <input
               type="text"
-              v-model="formData.name"
+              v-model="form.name"
               class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
-              placeholder="Ingrese el nombre"
+              placeholder="Ingrese el nombre del reconocimiento"
               required
             />
+            <p v-if="form.errors.name" class="mt-1 text-sm text-red-600">{{ form.errors.name }}</p>
           </div>
 
           <!-- Tipo -->
@@ -122,28 +123,69 @@
             </label>
             <input
               type="text"
-              v-model="formData.type"
+              v-model="form.type"
               class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
               placeholder="Ingrese el tipo"
               required
             />
+            <p v-if="form.errors.type" class="mt-1 text-sm text-red-600">{{ form.errors.type }}</p>
           </div>
 
-          <!-- Autores -->
+          <!-- Autores (Usuarios del sistema) -->
           <div class="space-y-1">
             <label class="block text-sm font-medium text-gray-700">
               <div class="flex items-center gap-2">
-                <UserCircleIcon :size="16" class="text-gray-500" />
-                Autores
+                <UsersIcon :size="16" class="text-gray-500" />
+                Autores (Usuarios del sistema) <span class="text-red-500">*</span>
               </div>
             </label>
-            <input
-              type="text"
-              v-model="formData.authors"
-              class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
-              placeholder="Ingrese los autores"
-              required
-            />
+            <!-- Chips seleccionados -->
+            <div v-if="form.authors.length" class="flex flex-wrap gap-2 mb-2">
+              <span v-for="id in form.authors" :key="id" class="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
+                {{ usersMap.get(id) ?? `ID ${id}` }}
+                <button type="button" class="text-blue-600 hover:text-blue-800" @click="removeUser(id)">
+                  <XIcon :size="14" />
+                </button>
+              </span>
+            </div>
+            <!-- Input de búsqueda -->
+            <div class="relative" ref="userComboboxRef">
+              <input
+                type="text"
+                v-model="userQuery"
+                @focus="showUserDropdown = true; ensureInitialSearch()"
+                @input="onUserQueryInput"
+                @keydown.esc.prevent="showUserDropdown = false"
+                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder="Buscar usuarios por nombre..."
+                autocomplete="off"
+              />
+              <!-- Dropdown resultados -->
+              <div v-if="showUserDropdown" class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                <div v-if="usersLoading" class="px-3 py-2 text-gray-500 text-sm">Cargando...</div>
+                <template v-else>
+                  <button
+                    v-for="u in searchResults"
+                    :key="u.id"
+                    type="button"
+                    class="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center justify-between"
+                    @click="selectUser(u)"
+                  >
+                    <span>{{ u.name }}</span>
+                    <span v-if="form.authors.includes(u.id)" class="text-xs text-green-600">Seleccionado</span>
+                  </button>
+                  <button
+                    v-if="nextUsersPageUrl"
+                    type="button"
+                    class="w-full text-center px-3 py-2 text-blue-600 hover:bg-blue-50 border-t"
+                    @click="loadMoreUsers"
+                  >
+                    Cargar más
+                  </button>
+                  <div v-if="!searchResults.length && !usersLoading" class="px-3 py-2 text-gray-500 text-sm">Sin resultados</div>
+                </template>
+              </div>
+            </div>
           </div>
 
           <!-- Fecha -->
@@ -156,10 +198,10 @@
             </label>
             <input
               type="date"
-              v-model="formData.date"
+              v-model="form.date"
               class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
-              required
             />
+            <p v-if="form.errors.date" class="mt-1 text-sm text-red-600">{{ form.errors.date }}</p>
           </div>
 
           <!-- Botones del formulario -->
@@ -173,7 +215,11 @@
             </button>
             <button
               type="submit"
-              class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              :disabled="form.processing"
+              :class="[
+                'w-full sm:w-auto px-6 py-2.5 rounded-lg transition-colors font-medium',
+                form.processing ? 'bg-blue-400 cursor-not-allowed text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
+              ]"
             >
               {{ editingId ? 'Update Recognition' : 'Save Recognition' }}
             </button>
@@ -189,7 +235,7 @@
           <div>
             <h3 class="text-lg font-semibold text-gray-900">{{ recognition.name }}</h3>
             <p class="text-sm text-gray-600">{{ recognition.type }}</p>
-            <p class="text-sm text-gray-600">{{ recognition.authors }}</p>
+            <p class="text-sm text-gray-600">{{ Array.isArray(recognition.authors) ? recognition.authors.join(', ') : (recognition.authors || '') }}</p>
             <p class="text-sm text-gray-500">{{ formatDate(recognition.date) }}</p>
           </div>
           <div class="flex gap-2">
@@ -200,7 +246,7 @@
               <Edit2Icon :size="18" />
             </button>
             <button
-              @click="handleDelete(recognition.id)"
+              @click="openDeleteModal(recognition)"
               class="text-red-600 hover:text-red-900"
             >
               <Trash2Icon :size="18" />
@@ -209,12 +255,53 @@
         </div>
       </div>
     </div>
+    <!-- Estado vacío cuando no hay resultados -->
+    <div v-if="!filteredAndSortedRecognitions.length" class="mt-6 w-full bg-white border border-gray-200 rounded-xl p-6 text-center text-gray-600">
+      No hay reconocimientos que coincidan con el criterio de búsqueda
+      <span v-if="searchQuery">: "{{ searchQuery }}"</span>.
+    </div>
+  </div>
+
+  <!-- Modal de confirmación de eliminación -->
+  <div
+    v-if="showDeleteModal"
+    class="fixed inset-0 z-50 flex items-center justify-center"
+    aria-modal="true"
+    role="dialog"
+  >
+    <!-- Overlay -->
+    <div
+      class="absolute inset-0 bg-black/40"
+      @click.self="closeDeleteModal"
+    ></div>
+    <!-- Contenido del modal -->
+    <div class="relative z-10 w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+      <div class="flex items-start gap-3">
+        <div class="flex-1">
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Confirmar eliminación</h3>
+          <p class="text-sm text-gray-600 mb-3">
+            ¿Seguro que deseas eliminar este reconocimiento?
+          </p>
+          <div v-if="recognitionToDelete" class="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <div v-if="recognitionToDelete.name"><span class="font-medium text-gray-900">Nombre:</span> {{ recognitionToDelete.name }}</div>
+            <div v-if="recognitionToDelete.type"><span class="font-medium text-gray-900">Tipo:</span> {{ recognitionToDelete.type }}</div>
+            <div v-if="recognitionToDelete.date"><span class="font-medium text-gray-900">Fecha:</span> {{ formatDate(recognitionToDelete.date) }}</div>
+            <div v-if="Array.isArray(recognitionToDelete.authors) && recognitionToDelete.authors.length"><span class="font-medium text-gray-900">Autores:</span> {{ recognitionToDelete.authors.join(', ') }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end gap-3">
+        <button type="button" @click="closeDeleteModal" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Cancelar</button>
+        <button type="button" @click="confirmDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 // Importaciones principales
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { router, usePage, useForm } from '@inertiajs/vue3'
 import { 
   Plus as PlusIcon, 
   Edit2 as Edit2Icon, 
@@ -224,29 +311,30 @@ import {
   Search as SearchIcon, 
   ChevronUp as ChevronUpIcon, 
   ChevronDown as ChevronDownIcon, 
-  UserCircle as UserCircleIcon
+  UserCircle as UserCircleIcon,
+  Users as UsersIcon
 } from 'lucide-vue-next'
 
-// Datos mock iniciales
-const mockRecognitions = [
-  {
-    id: '1',
-    name: 'Outstanding Research Contribution',
-    type: 'Premio',
-    authors: 'A. Einstein, N. Bohr',
-    date: '2024-02-15'
+// Props desde la página Inertia
+const props = defineProps({
+  recognitions: {
+    type: Object,
+    default: () => ({ data: [], links: [] })
   },
-  {
-    id: '2',
-    name: 'Excellence in Innovation',
-    type: 'Reconocimiento',
-    authors: 'G. Hinton, Y. LeCun',
-    date: '2023-11-10'
+  users: {
+    type: Array,
+    default: () => []
   }
-]
+})
 
-// Estado reactivo
-const recognitions = ref([...mockRecognitions])
+// Estado reactivo usando datos del servidor
+const recognitions = ref([...(props.recognitions?.data || [])])
+watch(
+  () => props.recognitions,
+  (val) => {
+    recognitions.value = [...(val?.data || [])]
+  }
+)
 const showForm = ref(false)
 const editingId = ref(null)
 const searchQuery = ref('')
@@ -255,12 +343,104 @@ const sortDirection = ref('desc')
 const typeFilter = ref('all')
 const yearFilter = ref('all')
 
+// Usuario actual (para preseleccionar)
+const page = usePage()
+const currentUserId = page?.props?.auth?.user?.id ?? null
+const currentUserName = page?.props?.auth?.user?.name ?? null
+
 // Datos del formulario
-const formData = ref({
+const form = useForm({
   name: '',
   type: '',
-  authors: '',
-  date: ''
+  date: '',
+  description: null,
+  authors: currentUserId ? [currentUserId] : [],
+})
+
+// ========== Autocomplete de usuarios (idéntico a Events.vue) ==========
+const userQuery = ref('')
+const usersLoading = ref(false)
+const searchResults = ref([])
+const showUserDropdown = ref(false)
+const nextUsersPageUrl = ref(null)
+const usersMap = new Map()
+const userComboboxRef = ref(null)
+
+// Semilla inicial del mapa con props.users y usuario actual
+if (Array.isArray(props.users)) {
+  props.users.forEach(u => usersMap.set(u.id, u.name))
+}
+if (currentUserId && currentUserName) {
+  usersMap.set(currentUserId, currentUserName)
+}
+
+let userSearchDebounce = null
+const onUserQueryInput = () => {
+  if (userSearchDebounce) clearTimeout(userSearchDebounce)
+  userSearchDebounce = setTimeout(() => {
+    fetchUsers(userQuery.value)
+  }, 300)
+}
+
+const ensureInitialSearch = () => {
+  if (!searchResults.value.length && !usersLoading.value) {
+    fetchUsers('')
+  }
+}
+
+const fetchUsers = async (q = '', url = null) => {
+  try {
+    usersLoading.value = true
+    const endpoint = url || route('users.search', { q, per_page: 15 })
+    const res = await fetch(endpoint)
+    const data = await res.json()
+    if (!url) {
+      searchResults.value = data.data || []
+    } else {
+      searchResults.value = [...searchResults.value, ...(data.data || [])]
+    }
+    ;(data.data || []).forEach(u => usersMap.set(u.id, u.name))
+    nextUsersPageUrl.value = data.next_page_url
+  } catch (e) {
+    // noop
+  } finally {
+    usersLoading.value = false
+  }
+}
+
+const loadMoreUsers = () => {
+  if (nextUsersPageUrl.value) {
+    fetchUsers(userQuery.value, nextUsersPageUrl.value)
+  }
+}
+
+const selectUser = (user) => {
+  if (!form.authors.includes(user.id)) {
+    form.authors.push(user.id)
+    usersMap.set(user.id, user.name)
+  }
+  showUserDropdown.value = false
+}
+
+const removeUser = (id) => {
+  form.authors = form.authors.filter(a => a !== id)
+}
+
+// Cierre por clic fuera
+const handleClickOutside = (e) => {
+  if (!showUserDropdown.value) return
+  const el = userComboboxRef.value
+  if (el && !el.contains(e.target)) {
+    showUserDropdown.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', handleClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleClickOutside)
 })
 
 // Computed: Lista de tipos únicos para el filtro
@@ -269,33 +449,57 @@ const types = computed(() =>
 )
 
 // Computed: Lista de años únicos para el filtro
-const years = computed(() => 
-  ['all', ...new Set(recognitions.value.map(r => 
-    new Date(r.date).getFullYear().toString()
-  ))].sort((a, b) => b.localeCompare(a))
-)
+const years = computed(() => {
+  const toYear = (dateString) => {
+    if (!dateString) return null
+    const [y] = String(dateString).split('-')
+    const yr = Number(y)
+    return Number.isFinite(yr) ? yr : null
+  }
+  const set = new Set(
+    recognitions.value
+      .map(r => toYear(r.date))
+      .filter((yr) => yr !== null)
+  )
+  return ['all', ...Array.from(set).sort((a, b) => b - a)]
+})
 
 // Computed: Lista filtrada y ordenada de reconocimientos
 const filteredAndSortedRecognitions = computed(() => {
   return recognitions.value
     .filter(recognition => {
       const q = searchQuery.value.toLowerCase()
+      const authorsText = Array.isArray(recognition.authors)
+        ? recognition.authors.join(' ').toLowerCase()
+        : String(recognition.authors || '').toLowerCase()
+      const nameText = String(recognition.name || '').toLowerCase()
+      const typeText = String(recognition.type || '').toLowerCase()
+      const dateRaw = String(recognition.date || '')
+      const dateText = String(formatDate(recognition.date) || '').toLowerCase()
       const matchesSearch = 
-        (recognition.name || '').toLowerCase().includes(q) ||
-        (recognition.type || '').toLowerCase().includes(q) ||
-        (recognition.authors || '').toLowerCase().includes(q)
+        nameText.includes(q) ||
+        typeText.includes(q) ||
+        authorsText.includes(q) ||
+        dateRaw.toLowerCase().includes(q) ||
+        dateText.includes(q)
 
-      const matchesType = typeFilter.value === 'all' || recognition.type === typeFilter.value
-      const matchesYear = yearFilter.value === 'all' || new Date(recognition.date).getFullYear().toString() === yearFilter.value
+      const matchesType = typeFilter.value === 'all' || (recognition.type || '') === typeFilter.value
+      const d = toLocalDateObj(recognition.date)
+      const recYear = d ? d.getFullYear() : null
+      const matchesYear = yearFilter.value === 'all' || recYear === yearFilter.value
 
       return matchesSearch && matchesType && matchesYear
     })
     .sort((a, b) => {
       let comparison = 0
       if (sortField.value === 'date') {
-        comparison = new Date(a.date).getTime() - new Date(b.date).getTime()
+        const da = toLocalDateObj(a.date)
+        const db = toLocalDateObj(b.date)
+        const ta = da ? da.getTime() : 0
+        const tb = db ? db.getTime() : 0
+        comparison = ta - tb
       } else {
-        comparison = a[sortField.value].localeCompare(b[sortField.value])
+        comparison = String(a[sortField.value] || '').localeCompare(String(b[sortField.value] || ''))
       }
       return sortDirection.value === 'asc' ? comparison : -comparison
     })
@@ -312,59 +516,108 @@ const handleSort = (field) => {
   }
 }
 
+// Abrir formulario de creación con el usuario autenticado preseleccionado
+const openCreateForm = () => {
+  editingId.value = null
+  form.reset()
+  form.clearErrors()
+  form.name = ''
+  form.type = ''
+  form.date = ''
+  form.description = null
+  form.authors = currentUserId ? [currentUserId] : []
+  showForm.value = true
+}
+
 // Maneja el envío del formulario (crear/editar)
 const handleSubmit = () => {
-  const recognition = {
-    id: editingId.value || Date.now().toString(),
-    ...formData.value
+  const options = {
+    preserveScroll: true,
+    onSuccess: () => {
+      router.reload({ only: ['recognitions'], onSuccess: () => closeForm() })
+    },
+    onError: () => {
+      // Mantener el modal abierto para mostrar errores
+      showForm.value = true
+    },
   }
 
-  if (editingId.value) {
-    const index = recognitions.value.findIndex(r => r.id === editingId.value)
-    if (index !== -1) {
-      recognitions.value[index] = recognition
-    }
-  } else {
-    recognitions.value.push(recognition)
+  if (!editingId.value) {
+    form.post('/recognitions', options)
+    return
   }
 
-  closeForm()
+  form.put(route('recognitions.update', editingId.value), options)
 }
 
 // Maneja la edición de un reconocimiento
 const handleEdit = (recognition) => {
-  formData.value = {
-    name: recognition.name || '',
-    type: recognition.type || '',
-    authors: recognition.authors || '',
-    date: recognition.date || ''
+  form.clearErrors()
+  form.name = recognition.name || ''
+  form.type = recognition.type || ''
+  form.date = recognition.date || ''
+  form.description = null
+  form.authors = Array.isArray(recognition.author_ids) ? [...recognition.author_ids] : []
+  // Poblar mapa de nombres si vienen alineados (opcional)
+  if (Array.isArray(recognition.authors) && Array.isArray(recognition.author_ids) && recognition.authors.length === recognition.author_ids.length) {
+    for (let i = 0; i < recognition.author_ids.length; i++) {
+      usersMap.set(recognition.author_ids[i], recognition.authors[i])
+    }
   }
   editingId.value = recognition.id
   showForm.value = true
 }
 
-// Maneja la eliminación de un reconocimiento
-const handleDelete = (id) => {
-  if (confirm('Are you sure you want to delete this recognition?')) {
-    recognitions.value = recognitions.value.filter(r => r.id !== id)
-  }
+// Estado y lógica para modal de eliminación
+const showDeleteModal = ref(false)
+const recognitionToDelete = ref(null)
+
+const openDeleteModal = (recognition) => {
+  recognitionToDelete.value = recognition
+  showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+  recognitionToDelete.value = null
+}
+
+const confirmDelete = () => {
+  if (!recognitionToDelete.value) return
+  const id = recognitionToDelete.value.id
+  router.delete(route('recognitions.destroy', id), {
+    preserveScroll: true,
+    onSuccess: () => {
+      router.reload({ only: ['recognitions'] })
+      closeDeleteModal()
+    }
+  })
 }
 
 // Cierra el formulario y resetea el estado
 const closeForm = () => {
   showForm.value = false
   editingId.value = null
-  formData.value = {
-    name: '',
-    type: '',
-    authors: '',
-    date: ''
-  }
+  form.reset()
+  form.clearErrors()
+  form.name = ''
+  form.type = ''
+  form.date = ''
+  form.description = null
+  form.authors = currentUserId ? [currentUserId] : []
 }
 
 // Formatea una fecha para mostrar
+const toLocalDateObj = (dateString) => {
+  if (!dateString) return null
+  const [y, m, d] = String(dateString).split('-').map(Number)
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null
+  return new Date(y, m - 1, d)
+}
+
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString()
+  const d = toLocalDateObj(dateString)
+  return d ? d.toLocaleDateString() : ''
 }
 
 // Obtiene las clases CSS para los botones de ordenamiento

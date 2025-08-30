@@ -36,7 +36,7 @@
               :aria-expanded="isUserMenuOpen ? 'true' : 'false'"
             >
               <UserCircleIcon :size="22" class="text-gray-600" />
-              <span class="font-medium" v-text="currentUser?.value?.name || 'Usuario'" />
+              <span class="font-medium" v-text="displayName" />
             </button>
             <!-- Dropdown -->
             <div
@@ -163,10 +163,10 @@
 
 <script setup>
 // Importaciones principales
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import NavItem from './NavItem.vue'
 import { useUser } from '../composables/useUser.js'
-import { router } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 // Iconos usados desde lucide-vue-next, renombrados con sufijo Icon
 import { 
   BookOpen as BookOpenIcon,
@@ -206,6 +206,17 @@ const isUserMenuOpenMobile = ref(false)
 // - isAdmin: habilita opciones administrativas
 // - setCurrentUser: permite cerrar sesión
 const { isAdmin, setCurrentUser, currentUser } = useUser()
+const page = usePage()
+
+// Inicializar currentUser desde Inertia si no está seteado
+if (!currentUser.value && page?.props?.auth?.user) {
+  setCurrentUser(page.props.auth.user)
+}
+
+// Nombre a mostrar en el botón
+const displayName = computed(() => {
+  return currentUser.value?.name ?? page?.props?.auth?.user?.name ?? 'Usuario'
+})
 
 // Métodos
 // Alterna visibilidad del menú móvil

@@ -53,6 +53,34 @@
       </div>
     </div>
 
+    <!-- Botones de ordenamiento -->
+    <div class="flex flex-wrap gap-4">
+      <button
+        @click="handleSort('name')"
+        :class="getSortButtonClasses('name')"
+      >
+        Nombre
+        <ChevronUpIcon v-if="sortField === 'name' && sortDirection === 'asc'" :size="16" />
+        <ChevronDownIcon v-else-if="sortField === 'name' && sortDirection === 'desc'" :size="16" />
+      </button>
+      <button
+        @click="handleSort('category')"
+        :class="getSortButtonClasses('category')"
+      >
+        Categoria
+        <ChevronUpIcon v-if="sortField === 'category' && sortDirection === 'asc'" :size="16" />
+        <ChevronDownIcon v-else-if="sortField === 'category' && sortDirection === 'desc'" :size="16" />
+      </button>
+      <button
+        @click="handleSort('date')"
+        :class="getSortButtonClasses('date')"
+      >
+        Fecha
+        <ChevronUpIcon v-if="sortField === 'date' && sortDirection === 'asc'" :size="16" />
+        <ChevronDownIcon v-else-if="sortField === 'date' && sortDirection === 'desc'" :size="16" />
+      </button>
+    </div>
+
     <!-- Modal de formulario -->
     <div v-if="showForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div class="bg-white rounded-xl p-4 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -295,7 +323,9 @@ import {
   FileText as FileTextIcon, 
   Search as SearchIcon, 
   UserCircle as UserCircleIcon,
-  Users as UsersIcon 
+  Users as UsersIcon, 
+  ChevronUp as ChevronUpIcon,
+  ChevronDown as ChevronDownIcon
 } from 'lucide-vue-next'
 
 // Props recibidas desde la página Inertia
@@ -520,6 +550,15 @@ const handleSort = (field) => {
     sortField.value = field
     sortDirection.value = 'asc'
   }
+}
+
+// Clases para botones de ordenamiento
+const getSortButtonClasses = (field) => {
+  const isActive = sortField.value === field
+  const base = 'flex items-center gap-1 px-3 py-1 rounded-lg'
+  return isActive
+    ? `${base} bg-blue-100 text-blue-700`
+    : `${base} bg-gray-100 text-gray-700`
 }
 
 // Maneja el envío del formulario (crear/editar)
