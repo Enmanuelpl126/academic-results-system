@@ -1,7 +1,7 @@
 <template>
   <!-- Página principal de Events - el layout se aplica automáticamente -->
   <div class="space-y-6">
-    <Events :initialEvents="events?.data ?? []" />
+    <Events :initialEvents="events?.data ?? []" :users="users ?? []" :key="events?.to ?? 0" />
 
     <!-- Paginación (igual estilo que Awards.vue) -->
     <nav v-if="events && events.links" class="flex flex-wrap gap-2 items-center px-6 py-3">
@@ -26,16 +26,21 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import Events from '@/components/Events.vue'
 import { Link } from '@inertiajs/vue3'
+import { computed } from 'vue'
 
 // Props desde Inertia (EventController@index) - paginador
 const props = defineProps({
   events: {
     type: Object,
     default: () => ({ data: [], links: [] })
+  },
+  users: {
+    type: Array,
+    default: () => []
   }
 })
 
-const events = props.events
+const events = computed(() => props.events)
 
 // Configuración de la página para Inertia.js
 defineOptions({

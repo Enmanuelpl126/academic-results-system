@@ -5,7 +5,7 @@
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
       <h2 class="text-2xl font-bold text-gray-900">Events</h2>
       <button
-        @click="showForm = true"
+        @click="openCreateForm"
         class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
       >
         <PlusIcon :size="20" />
@@ -88,21 +88,61 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Autores Ponencia -->
+            <!-- Autores (Usuarios del sistema) -->
             <div class="space-y-1">
               <label class="block text-sm font-medium text-gray-700">
                 <div class="flex items-center gap-2">
-                  <UserCircleIcon :size="16" class="text-gray-500" />
-                  Autores Ponencia
+                  <UsersIcon :size="16" class="text-gray-500" />
+                  Autores (Usuarios del sistema) <span class="text-red-500">*</span>
                 </div>
               </label>
-              <input
-                type="text"
-                v-model="formData.authors"
-                class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                placeholder="Ingrese los autores de la ponencia"
-                required
-              />
+              <!-- Chips seleccionados -->
+              <div v-if="formData.authors.length" class="flex flex-wrap gap-2 mb-2">
+                <span v-for="id in formData.authors" :key="id" class="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">
+                  {{ usersMap.get(id) ?? `ID ${id}` }}
+                  <button type="button" class="text-blue-600 hover:text-blue-800" @click="removeUser(id)">
+                    <XIcon :size="14" />
+                  </button>
+                </span>
+              </div>
+              <!-- Input de búsqueda -->
+              <div class="relative" ref="userComboboxRef">
+                <input
+                  type="text"
+                  v-model="userQuery"
+                  @focus="showUserDropdown = true; ensureInitialSearch()"
+                  @input="onUserQueryInput"
+                  @keydown.esc.prevent="showUserDropdown = false"
+                  class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                  placeholder="Buscar usuarios por nombre..."
+                  autocomplete="off"
+                />
+                <!-- Dropdown resultados -->
+                <div v-if="showUserDropdown" class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                  <div v-if="usersLoading" class="px-3 py-2 text-gray-500 text-sm">Cargando...</div>
+                  <template v-else>
+                    <button
+                      v-for="u in searchResults"
+                      :key="u.id"
+                      type="button"
+                      class="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center justify-between"
+                      @click="selectUser(u)"
+                    >
+                      <span>{{ u.name }}</span>
+                      <span v-if="formData.authors.includes(u.id)" class="text-xs text-green-600">Seleccionado</span>
+                    </button>
+                    <button
+                      v-if="nextUsersPageUrl"
+                      type="button"
+                      class="w-full text-center px-3 py-2 text-blue-600 hover:bg-blue-50 border-t"
+                      @click="loadMoreUsers"
+                    >
+                      Cargar más
+                    </button>
+                    <div v-if="!searchResults.length && !usersLoading" class="px-3 py-2 text-gray-500 text-sm">Sin resultados</div>
+                  </template>
+                </div>
+              </div>
             </div>
 
             <!-- Categoria -->
@@ -113,13 +153,18 @@
                   Categoria
                 </div>
               </label>
-              <input
-                type="text"
+              <select
                 v-model="formData.category"
                 class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
-                placeholder="Ingrese la categoría"
                 required
-              />
+              >
+                <option value="" disabled>Seleccione una categoría</option>
+                <option value="Institucional">Institucional</option>
+                <option value="Municipal">Municipal</option>
+                <option value="Territorial">Territorial</option>
+                <option value="Internacional">Internacional</option>
+                <option value="Nacional">Nacional</option>
+              </select>
             </div>
           </div>
 
@@ -168,7 +213,7 @@
             <h3 class="text-lg font-semibold text-gray-900">{{ event.name }}</h3>
             <div class="flex items-center gap-2 text-sm text-gray-600 mt-1">
               <UserCircleIcon :size="16" class="text-gray-400" />
-              {{ event.authors }}
+              {{ Array.isArray(event.authors) ? event.authors.join(', ') : (event.authors || '') }}
             </div>
             <div class="flex items-center gap-2 text-sm text-gray-600 mt-1">
               <FileTextIcon :size="16" class="text-gray-400" />
@@ -187,7 +232,7 @@
               <Edit2Icon :size="18" />
             </button>
             <button
-              @click="handleDelete(event.id)"
+              @click="openDeleteModal(event)"
               class="text-red-600 hover:text-red-900"
             >
               <Trash2Icon :size="18" />
@@ -196,12 +241,51 @@
         </div>
       </div>
     </div>
+    <!-- Estado vacío cuando no hay resultados -->
+    <div v-if="!filteredAndSortedEvents.length" class="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center text-gray-500">
+      No hay eventos que coincidan con el criterio de búsqueda
+      <span v-if="searchQuery">: "{{ searchQuery }}"</span>.
+    </div>
+    <!-- Modal de confirmación de eliminación -->
+    <div
+      v-if="showDeleteModal"
+      class="fixed inset-0 z-50 flex items-center justify-center"
+      aria-modal="true"
+      role="dialog"
+    >
+      <!-- Overlay -->
+      <div
+        class="absolute inset-0 bg-black/40"
+        @click.self="closeDeleteModal"
+      ></div>
+      <!-- Contenido del modal -->
+      <div class="relative z-10 w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div class="flex items-start gap-3">
+          <div class="flex-1">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Confirmar eliminación</h3>
+            <p class="text-sm text-gray-600 mb-3">
+              ¿Seguro que deseas eliminar este evento?
+            </p>
+            <div v-if="eventToDelete" class="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <div><span class="font-medium text-gray-900">Nombre:</span> {{ eventToDelete.name }}</div>
+              <div><span class="font-medium text-gray-900">Fecha:</span> {{ formatDate(eventToDelete.date) }}</div>
+              <div v-if="Array.isArray(eventToDelete.authors) && eventToDelete.authors.length"><span class="font-medium text-gray-900">Autores:</span> {{ eventToDelete.authors.join(', ') }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+          <button type="button" @click="closeDeleteModal" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Cancelar</button>
+          <button type="button" @click="confirmDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 // Importaciones principales
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { router, usePage } from '@inertiajs/vue3'
 import { 
   Plus as PlusIcon, 
   Edit2 as Edit2Icon, 
@@ -210,7 +294,8 @@ import {
   Calendar as CalendarIcon, 
   FileText as FileTextIcon, 
   Search as SearchIcon, 
-  UserCircle as UserCircleIcon 
+  UserCircle as UserCircleIcon,
+  Users as UsersIcon 
 } from 'lucide-vue-next'
 
 // Props recibidas desde la página Inertia
@@ -218,11 +303,23 @@ const props = defineProps({
   initialEvents: {
     type: Array,
     default: () => []
+  },
+  users: {
+    type: Array,
+    default: () => []
   }
 })
 
 // Estado reactivo: usar props.initialEvents; si vienen vacíos puedes cargar valores por defecto si lo deseas
 const events = ref([...(props.initialEvents || [])])
+
+// Mantener sincronizado el estado local cuando Inertia actualice las props
+watch(
+  () => props.initialEvents,
+  (newVal) => {
+    events.value = [...(newVal || [])]
+  }
+)
 const showForm = ref(false)
 const editingId = ref(null)
 const searchQuery = ref('')
@@ -234,9 +331,105 @@ const yearFilter = ref('all')
 // Datos del formulario
 const formData = ref({
   name: '',
-  authors: '',
+  authors: [], // se inicializa más abajo según currentUserId
   category: '',
   date: ''
+})
+
+// Usuario actual (para preseleccionar)
+const page = usePage()
+const currentUserId = page?.props?.auth?.user?.id ?? null
+const currentUserName = page?.props?.auth?.user?.name ?? null
+
+// ========== Autocomplete de usuarios ==========
+const userQuery = ref('')
+const usersLoading = ref(false)
+const searchResults = ref([])
+const showUserDropdown = ref(false)
+const nextUsersPageUrl = ref(null)
+const usersMap = new Map()
+const userComboboxRef = ref(null)
+
+// Semilla inicial del mapa con props.users y usuario actual
+if (Array.isArray(props.users)) {
+  props.users.forEach(u => usersMap.set(u.id, u.name))
+}
+if (currentUserId && currentUserName) {
+  usersMap.set(currentUserId, currentUserName)
+}
+
+// Inicializar autores por defecto con el usuario autenticado
+if (currentUserId) {
+  formData.value.authors = [currentUserId]
+}
+
+let userSearchDebounce = null
+const onUserQueryInput = () => {
+  if (userSearchDebounce) clearTimeout(userSearchDebounce)
+  userSearchDebounce = setTimeout(() => {
+    fetchUsers(userQuery.value)
+  }, 300)
+}
+
+const ensureInitialSearch = () => {
+  if (!searchResults.value.length && !usersLoading.value) {
+    fetchUsers('')
+  }
+}
+
+const fetchUsers = async (q = '', url = null) => {
+  try {
+    usersLoading.value = true
+    const endpoint = url || route('users.search', { q, per_page: 15 })
+    const res = await fetch(endpoint)
+    const data = await res.json()
+    if (!url) {
+      searchResults.value = data.data || []
+    } else {
+      searchResults.value = [...searchResults.value, ...(data.data || [])]
+    }
+    ;(data.data || []).forEach(u => usersMap.set(u.id, u.name))
+    nextUsersPageUrl.value = data.next_page_url
+  } catch (e) {
+    // noop
+  } finally {
+    usersLoading.value = false
+  }
+}
+
+const loadMoreUsers = () => {
+  if (nextUsersPageUrl.value) {
+    fetchUsers(userQuery.value, nextUsersPageUrl.value)
+  }
+}
+
+const selectUser = (user) => {
+  if (!formData.value.authors.includes(user.id)) {
+    formData.value.authors.push(user.id)
+    usersMap.set(user.id, user.name)
+  }
+  showUserDropdown.value = false
+}
+
+const removeUser = (id) => {
+  formData.value.authors = formData.value.authors.filter(a => a !== id)
+}
+
+// Cierre por clic fuera
+const handleClickOutside = (e) => {
+  if (!showUserDropdown.value) return
+  const el = userComboboxRef.value
+  if (el && !el.contains(e.target)) {
+    showUserDropdown.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', handleClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleClickOutside)
 })
 
 // Categorías disponibles construidas desde los datos
@@ -249,13 +442,18 @@ const categories = computed(() => {
   return ['all', ...Array.from(set)]
 })
 
-// Años disponibles construidos desde los datos
+// Años disponibles construidos desde los datos (parse manual para evitar timezone)
 const years = computed(() => {
+  const toYear = (dateString) => {
+    if (!dateString) return null
+    const [y] = String(dateString).split('-')
+    const yr = Number(y)
+    return Number.isFinite(yr) ? yr : null
+  }
   const set = new Set(
     events.value
-      .map(e => new Date(e.date))
-      .filter(d => !isNaN(d))
-      .map(d => d.getFullYear())
+      .map(e => toYear(e.date))
+      .filter((yr) => yr !== null)
   )
   return ['all', ...Array.from(set).sort((a, b) => b - a)]
 })
@@ -265,13 +463,23 @@ const filteredAndSortedEvents = computed(() => {
   return events.value
     .filter(event => {
       const q = searchQuery.value.toLowerCase()
+      const authorsText = Array.isArray(event.authors)
+        ? event.authors.join(' ').toLowerCase()
+        : String(event.authors || '').toLowerCase()
+      const nameText = String(event.name || '').toLowerCase()
+      const categoryText = String(event.category || '').toLowerCase()
+      const dateRaw = String(event.date || '')
+      const dateText = String(formatDate(event.date) || '').toLowerCase()
       const matchesSearch = 
-        event.name.toLowerCase().includes(q) ||
-        (event.authors || '').toLowerCase().includes(q) ||
-        (event.category || '').toLowerCase().includes(q)
+        nameText.includes(q) ||
+        categoryText.includes(q) ||
+        authorsText.includes(q) ||
+        dateRaw.toLowerCase().includes(q) ||
+        dateText.includes(q)
 
       const matchesCategory = categoryFilter.value === 'all' || (event.category || '') === categoryFilter.value
-      const eventYear = new Date(event.date).getFullYear()
+      const d = toLocalDateObj(event.date)
+      const eventYear = d ? d.getFullYear() : null
       const matchesYear = yearFilter.value === 'all' || eventYear === yearFilter.value
 
       return matchesSearch && matchesCategory && matchesYear
@@ -279,15 +487,31 @@ const filteredAndSortedEvents = computed(() => {
     .sort((a, b) => {
       let comparison = 0
       if (sortField.value === 'date') {
-        comparison = new Date(a.date).getTime() - new Date(b.date).getTime()
+        const da = toLocalDateObj(a.date)
+        const db = toLocalDateObj(b.date)
+        const ta = da ? da.getTime() : 0
+        const tb = db ? db.getTime() : 0
+        comparison = ta - tb
       } else {
-        comparison = a[sortField.value].localeCompare(b[sortField.value])
+        comparison = String(a[sortField.value] || '').localeCompare(String(b[sortField.value] || ''))
       }
       return sortDirection.value === 'asc' ? comparison : -comparison
     })
 })
 
 // Métodos
+// Maneja el ordenamiento por campo
+// Abrir formulario de creación con el usuario autenticado preseleccionado
+const openCreateForm = () => {
+  editingId.value = null
+  formData.value = {
+    name: '',
+    authors: currentUserId ? [currentUserId] : [],
+    category: '',
+    date: ''
+  }
+  showForm.value = true
+}
 // Maneja el ordenamiento por campo
 const handleSort = (field) => {
   if (sortField.value === field) {
@@ -300,40 +524,79 @@ const handleSort = (field) => {
 
 // Maneja el envío del formulario (crear/editar)
 const handleSubmit = () => {
-  const event = {
-    id: editingId.value || Date.now().toString(),
-    ...formData.value
+  const payload = {
+    name: formData.value.name,
+    category: formData.value.category || null,
+    date: formData.value.date || null,
+    description: null, // El formulario actual no tiene description; dejar null por ahora
+    authors: formData.value.authors,
   }
 
   if (editingId.value) {
-    const index = events.value.findIndex(e => e.id === editingId.value)
-    if (index !== -1) {
-      events.value[index] = event
-    }
+    router.put(`/events/${editingId.value}`, payload, {
+      preserveScroll: true,
+      onSuccess: () => {
+        router.reload({
+          only: ['events'],
+          onSuccess: () => closeForm()
+        })
+      }
+    })
   } else {
-    events.value.push(event)
+    router.post('/events', payload, {
+      preserveScroll: true,
+      onSuccess: () => {
+        router.reload({
+          only: ['events'],
+          onSuccess: () => closeForm()
+        })
+      }
+    })
   }
-
-  closeForm()
 }
 
 // Maneja la edición de un evento
 const handleEdit = (event) => {
   formData.value = {
     name: event.name || '',
-    authors: event.authors || '',
+    authors: Array.isArray(event.author_ids) ? [...event.author_ids] : [],
     category: event.category || '',
     date: event.date || ''
+  }
+  // Poblar mapa de nombres si vienen alineados (opcional)
+  if (Array.isArray(event.authors) && Array.isArray(event.author_ids) && event.authors.length === event.author_ids.length) {
+    for (let i = 0; i < event.author_ids.length; i++) {
+      usersMap.set(event.author_ids[i], event.authors[i])
+    }
   }
   editingId.value = event.id
   showForm.value = true
 }
 
-// Maneja la eliminación de un evento
-const handleDelete = (id) => {
-  if (confirm('Are you sure you want to delete this event?')) {
-    events.value = events.value.filter(e => e.id !== id)
-  }
+// Estado y lógica para modal de eliminación
+const showDeleteModal = ref(false)
+const eventToDelete = ref(null)
+
+const openDeleteModal = (event) => {
+  eventToDelete.value = event
+  showDeleteModal.value = true
+}
+
+const confirmDelete = () => {
+  if (!eventToDelete.value) return
+  const id = eventToDelete.value.id
+  router.delete(`/events/${id}`, {
+    preserveScroll: true,
+    onSuccess: () => {
+      router.reload({ only: ['events'] })
+      closeDeleteModal()
+    }
+  })
+}
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+  eventToDelete.value = null
 }
 
 // Cierra el formulario y resetea el estado
@@ -342,15 +605,24 @@ const closeForm = () => {
   editingId.value = null
   formData.value = {
     name: '',
-    authors: '',
+    authors: currentUserId ? [currentUserId] : [],
     category: '',
     date: ''
   }
 }
 
+// Helpers de fecha (parse local para evitar desfase por timezone)
+const toLocalDateObj = (dateString) => {
+  if (!dateString) return null
+  const [y, m, d] = String(dateString).split('-').map(Number)
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null
+  return new Date(y, m - 1, d)
+}
+
 // Formatea una fecha para mostrar
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString()
+  const d = toLocalDateObj(dateString)
+  return d ? d.toLocaleDateString() : ''
 }
 
 // Obtiene el componente de icono según el tipo de evento

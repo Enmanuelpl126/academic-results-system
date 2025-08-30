@@ -55,6 +55,18 @@ Route::get('/events', [EventController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('events');
 
+Route::post('/events', [EventController::class, 'store'])
+    ->middleware(['auth', 'verified'])
+    ->name('events.store');
+
+Route::put('/events/{event}', [EventController::class, 'update'])
+    ->middleware(['auth', 'verified'])
+    ->name('events.update');
+
+Route::delete('/events/{event}', [EventController::class, 'destroy'])
+    ->middleware(['auth', 'verified'])
+    ->name('events.destroy');
+
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
