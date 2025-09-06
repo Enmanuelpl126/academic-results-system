@@ -27,8 +27,13 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'password'
-       
+        'password',
+        'department_id',
+        'ci',
+        'teaching_category',
+        'scientific_category',
+        'professional_level',
+        'is_enabled'
     ];
 
     /**
@@ -46,17 +51,11 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
-
-
-
-
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'is_enabled' => 'boolean',
+        'password' => 'hashed',
+    ];
 
     public function awards(): BelongsToMany
     {

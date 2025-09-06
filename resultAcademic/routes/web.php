@@ -83,5 +83,21 @@ Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+// Rutas de administración
+Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [App\Http\Controllers\AdminController::class, 'index'])->name('index');
+    
+    // Gestión de usuarios
+    Route::post('/users', [App\Http\Controllers\AdminController::class, 'storeUser'])->name('users.store');
+    Route::put('/users/{id}', [App\Http\Controllers\AdminController::class, 'updateUser'])->name('users.update');
+    Route::put('/users/{id}/status', [App\Http\Controllers\AdminController::class, 'updateUserStatus'])->name('users.status');
+    Route::delete('/users/{id}', [App\Http\Controllers\AdminController::class, 'destroyUser'])->name('users.destroy');
+    
+    // Gestión de departamentos
+    Route::post('/departments', [App\Http\Controllers\AdminController::class, 'storeDepartment'])->name('departments.store');
+    Route::put('/departments/{id}', [App\Http\Controllers\AdminController::class, 'updateDepartment'])->name('departments.update');
+    Route::delete('/departments/{id}', [App\Http\Controllers\AdminController::class, 'destroyDepartment'])->name('departments.destroy');
+});
+
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

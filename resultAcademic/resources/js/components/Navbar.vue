@@ -5,7 +5,7 @@
       <div class="flex items-center justify-between h-16">
         <div class="flex-shrink-0">
           <h1 class="text-xl font-bold text-gray-900">
-            Scientific Achievements
+           Resultados Academicos 
           </h1>
         </div>
 
@@ -165,7 +165,6 @@
 // Importaciones principales
 import { ref, computed } from 'vue'
 import NavItem from './NavItem.vue'
-import { useUser } from '../composables/useUser.js'
 import { router, usePage } from '@inertiajs/vue3'
 // Iconos usados desde lucide-vue-next, renombrados con sufijo Icon
 import { 
@@ -205,13 +204,14 @@ const isUserMenuOpenMobile = ref(false)
 // Contexto de usuario
 // - isAdmin: habilita opciones administrativas
 // - setCurrentUser: permite cerrar sesión
-const { isAdmin, setCurrentUser, currentUser } = useUser()
 const page = usePage()
-
-// Inicializar currentUser desde Inertia si no está seteado
-if (!currentUser.value && page?.props?.auth?.user) {
-  setCurrentUser(page.props.auth.user)
-}
+// Derivar el usuario actual directamente desde las props de Inertia
+const currentUser = computed(() => page?.props?.auth?.user ?? null)
+// Determinar si es admin según propiedades comunes (ajusta según tu backend)
+const isAdmin = computed(() => {
+  const u = currentUser.value
+  return u?.role === 'admin' || u?.is_admin === true || u?.isAdmin === true
+})
 
 // Nombre a mostrar en el botón
 const displayName = computed(() => {
@@ -245,10 +245,12 @@ const handleLogout = () => {
 
 // Definición de los elementos principales de navegación
 const mainNavItems = [
-  { icon: BookOpenIcon, label: "Publications", id: "publications" },
-  { icon: AwardIcon, label: "Recognitions", id: "recognitions" },
-  { icon: CalendarIcon, label: "Events", id: "events" },
-  { icon: TrophyIcon, label: "Awards", id: "awards" },
-  { icon: LightbulbIcon, label: "Patents", id: "patents" },
+  { icon: BookOpenIcon, label: "Publicaciones", id: "publications" },
+   { icon: AwardIcon, label: "Reconocimientos", id: "recognitions" },
+   { icon: TrophyIcon, label: "Premios", id: "awards" },
+  { icon: CalendarIcon, label: "Eventos", id: "events" },
+ 
+  
+ 
 ]
 </script>

@@ -49,6 +49,16 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // Impedir acceso si el usuario está deshabilitado
+        $user = Auth::user();
+        if ($user && method_exists($user, 'getAttribute') && $user->getAttribute('is_enabled') === false) {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+            throw ValidationException::withMessages([
+                'email' => 'Tu cuenta está deshabilitada. Contacta al administrador.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 
