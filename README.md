@@ -4,7 +4,7 @@
 **Contacto:** pinerolinaresenmanuel@gmail.com
 **Año:** 2025
 
-Aplicación Laravel 11 con Inertia.js (Vue 3) para gestionar resultados académicos: publicaciones, eventos, premios y reconocimientos. Incluye control de acceso basado en roles y permisos con Spatie Permission, paginación , y UI moderna.
+Aplicación Laravel 11 con Inertia.js (Vue 3) para gestionar resultados académicos : publicaciones, eventos, premios y reconocimientos de el claustro de una institución educativa. Incluye control de acceso basado en roles y permisos con Spatie Permission, paginación , y UI moderna.
 
 ## Tecnologías
 - Laravel 11
@@ -15,17 +15,9 @@ Aplicación Laravel 11 con Inertia.js (Vue 3) para gestionar resultados académi
 
 ## Características clave
 - Roles y permisos con Spatie:
-  - Roles: `admin`, `directive`, `head_dp`, `profesor`.
-  - Permisos (ejemplos): `view_all_results`, `view_department_results`, `edit_any_result`, `edit_department_results`, `edit_own_result`, `delete_any_result`, `view_all_users`, etc.
 - Alcance de datos por permisos (backend):
-  - Ver: todos / departamento / propios.
-  - Editar: todos / departamento / propios.
-  - Eliminar: solo con `delete_any_result` (rutas protegidas con middleware).
 - UI condicionada por permisos (frontend):
-  - Botones Editar/Eliminar solo si corresponde.
-  - Columnas "Acciones" ocultas si quedarían vacías.
-- Paginación en español con componente compartido (`Pagination.vue`).
-- Política de usuarios: no se eliminan; se habilitan/deshabilitan con `is_enabled`.
+
 
 ## Requisitos previos
 - PHP 8.2+
