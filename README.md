@@ -87,15 +87,7 @@ La app quedará disponible en `http://127.0.0.1:8000`.
 
 Ajusta estos permisos/roles según tus necesidades en `RolesAndPermissionsSeeder`.
 
-## Política de usuarios
-- Los usuarios no se eliminan; se marcan con `is_enabled`.
-- Usuarios deshabilitados no pueden iniciar sesión.
-- En la UI, los administradores no pueden deshabilitar su propia cuenta (para evitar lockout).
 
-## Paginación
-- El backend usa `paginate(10)`.
-- El frontend muestra controles en español usando `Pagination.vue`.
-- Se alinea a la derecha bajo tablas/listados.
 
 ## Desarrollo y mantenimiento
 - Actualiza permisos/roles modificando `RolesAndPermissionsSeeder` y ejecuta:
