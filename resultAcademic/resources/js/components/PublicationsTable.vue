@@ -68,7 +68,7 @@
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Detalles
             </th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th v-if="showActionsColumn" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
               Acciones
             </th>
           </tr>
@@ -134,7 +134,7 @@
             </td>
 
             <!-- Acciones -->
-            <td class="px-6 py-4 text-right text-sm font-medium">
+            <td v-if="showActionsColumn" class="px-6 py-4 text-right text-sm font-medium">
               <div class="flex items-center justify-end gap-2">
                 <!-- Enlaces externos -->
                 <a 
@@ -150,6 +150,7 @@
                 
                 <!-- Botón editar -->
                 <button
+                  v-if="publication.can_edit"
                   @click="$emit('edit', publication)"
                   class="text-indigo-600 hover:text-indigo-900 transition-colors"
                   title="Editar publicación"
@@ -159,6 +160,7 @@
                 
                 <!-- Botón eliminar -->
                 <button
+                  v-if="canDelete"
                   @click="$emit('delete', publication.id)"
                   class="text-red-600 hover:text-red-900 transition-colors"
                   title="Eliminar publicación"
@@ -182,6 +184,8 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { usePage } from '@inertiajs/vue3'
 import { 
   ChevronUp as ChevronUpIcon,
   ChevronDown as ChevronDownIcon,
@@ -211,6 +215,19 @@ const props = defineProps({
 
 // Emits
 const emit = defineEmits(['sort', 'edit', 'delete'])
+
+// Permisos
+const page = usePage()
+const canDelete = computed(() => {
+  const perms = page?.props?.auth?.permissions || []
+  return Array.isArray(perms) && perms.includes('delete_any_result')
+})
+
+// Mostrar/ocultar la columna de acciones cuando no hay permisos de edición ni eliminación
+const showActionsColumn = computed(() => {
+  const anyEditable = Array.isArray(props.publications) && props.publications.some(p => p?.can_edit)
+  return canDelete.value || anyEditable
+})
 
 // Métodos
 const getTypeLabel = (type) => {

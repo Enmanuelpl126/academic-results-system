@@ -254,12 +254,14 @@
           </div>
           <div class="flex gap-2 ml-3 shrink-0">
             <button
+              v-if="event.can_edit"
               @click="handleEdit(event)"
               class="text-blue-600 hover:text-blue-900"
             >
               <Edit2Icon :size="18" />
             </button>
             <button
+              v-if="canDelete"
               @click="openDeleteModal(event)"
               class="text-red-600 hover:text-red-900"
             >
@@ -303,7 +305,7 @@
         </div>
         <div class="mt-6 flex justify-end gap-3">
           <button type="button" @click="closeDeleteModal" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Cancelar</button>
-          <button type="button" @click="confirmDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+          <button v-if="canDelete" type="button" @click="confirmDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
         </div>
       </div>
     </div>
@@ -370,6 +372,12 @@ const formData = ref({
 const page = usePage()
 const currentUserId = page?.props?.auth?.user?.id ?? null
 const currentUserName = page?.props?.auth?.user?.name ?? null
+
+// Permisos
+const canDelete = computed(() => {
+  const perms = page?.props?.auth?.permissions || []
+  return Array.isArray(perms) && perms.includes('delete_any_result')
+})
 
 // ========== Autocomplete de usuarios ==========
 const userQuery = ref('')

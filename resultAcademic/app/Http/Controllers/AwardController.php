@@ -17,20 +17,42 @@ class AwardController extends Controller
      */
     public function index(Request $request): Response
     {
-        // Obtener premios del usuario autenticado, junto con los autores (usuarios asociados)
-        $awards = Award::with('users:id,name')
-            ->whereHas('users', function ($q) use ($request) {
-                $q->where('users.id', $request->user()->id);
-            })
+        $user = $request->user();
+        $query = Award::with('users:id,name');
+
+        if ($user->can('view_all_results')) {
+            // Sin restricción: ver todos los premios
+        } elseif ($user->can('view_department_results')) {
+            // Ver premios donde algún autor pertenezca al mismo departamento del usuario
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            if ($deptId) {
+                $query->whereHas('users', function ($q) use ($deptId) {
+                    $q->where('users.department_id', $deptId);
+                });
+            } else {
+                // Si no tiene departamento, limitar a propios
+                $query->whereHas('users', function ($q) use ($user) {
+                    $q->where('users.id', $user->id);
+                });
+            }
+        } else {
+            // Solo propios
+            $query->whereHas('users', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        }
+
+        $awards = $query
             ->orderByDesc('date')
             ->paginate(10)
-            ->through(function ($award) {
+            ->through(function ($award) use ($user) {
                 return [
                     'id' => $award->id,
                     'type' => $award->type,
                     'date' => Carbon::parse($award->date)->toDateString(),
                     'authors' => $award->users->pluck('name')->all(),
                     'author_ids' => $award->users->pluck('id')->all(),
+                    'can_edit' => $this->canEditAward($user, $award),
                 ];
             });
 
@@ -122,13 +144,21 @@ class AwardController extends Controller
 
         // Normalizar fecha a formato YYYY-MM-DD
         $validated['date'] = Carbon::parse($validated['date'])->toDateString();
+        $user = $request->user();
+        $award = Award::with('users:id,department_id')->findOrFail($id);
 
-        // Solo permitir actualizar premios asociados al usuario autenticado
-        $award = Award::whereKey($id)
-            ->whereHas('users', function ($q) use ($request) {
-                $q->where('users.id', $request->user()->id);
-            })
-            ->firstOrFail();
+        // Autorización de edición basada en permisos
+        $allowed = false;
+        if ($user->can('edit_any_result')) {
+            $allowed = true;
+        } elseif ($user->can('edit_department_results')) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            $allowed = $deptId && $award->users->contains(fn($u) => (int)($u->department_id) === (int)$deptId);
+        } elseif ($user->can('edit_own_result')) {
+            $allowed = $award->users->contains('id', $user->id);
+        }
+
+        abort_unless($allowed, 403);
 
         $award->update([
             'type' => $validated['type'],
@@ -142,6 +172,31 @@ class AwardController extends Controller
         return redirect()
             ->route('awards')
             ->with('success', 'Premio actualizado correctamente.');
+    }
+
+    /**
+     * Determina si el usuario puede editar un premio (para props del frontend).
+     */
+    protected function canEditAward(User $user, Award $award): bool
+    {
+        if ($user->can('edit_any_result')) return true;
+        if ($user->can('edit_department_results')) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            if ($deptId) {
+                // Cargar relación users si no está cargada
+                if (!$award->relationLoaded('users')) {
+                    $award->load('users:id,department_id');
+                }
+                return $award->users->contains(fn($u) => (int)($u->department_id) === (int)$deptId);
+            }
+        }
+        if ($user->can('edit_own_result')) {
+            if (!$award->relationLoaded('users')) {
+                $award->load('users:id');
+            }
+            return $award->users->contains('id', $user->id);
+        }
+        return false;
     }
 
     /**

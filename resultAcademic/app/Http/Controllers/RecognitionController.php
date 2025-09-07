@@ -16,13 +16,32 @@ class RecognitionController extends Controller
      */
     public function index(Request $request): Response
     {
-        $recognitions = Recognition::with('users:id,name')
-            ->whereHas('users', function ($q) use ($request) {
-                $q->where('users.id', $request->user()->id);
-            })
+        $user = $request->user();
+        $query = Recognition::with('users:id,name');
+
+        if ($user->can('view_all_results')) {
+            // sin restricciones
+        } elseif ($user->can('view_department_results')) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            if ($deptId) {
+                $query->whereHas('users', function ($q) use ($deptId) {
+                    $q->where('users.department_id', $deptId);
+                });
+            } else {
+                $query->whereHas('users', function ($q) use ($user) {
+                    $q->where('users.id', $user->id);
+                });
+            }
+        } else {
+            $query->whereHas('users', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        }
+
+        $recognitions = $query
             ->orderByDesc('date')
             ->paginate(10)
-            ->through(function (Recognition $rec) {
+            ->through(function (Recognition $rec) use ($user) {
                 return [
                     'id' => $rec->id,
                     'name' => $rec->name,
@@ -31,6 +50,7 @@ class RecognitionController extends Controller
                     'description' => $rec->description,
                     'authors' => $rec->users->pluck('name')->all(),
                     'author_ids' => $rec->users->pluck('id')->all(),
+                    'can_edit' => $this->canEditRecognition($user, $rec),
                 ];
             });
 
@@ -97,12 +117,20 @@ class RecognitionController extends Controller
             $validated['date'] = Carbon::parse($validated['date'])->toDateString();
         }
 
-        // Solo permitir actualizar reconocimientos asociados al usuario autenticado
-        $recognition = Recognition::whereKey($id)
-            ->whereHas('users', function ($q) use ($request) {
-                $q->where('users.id', $request->user()->id);
-            })
-            ->firstOrFail();
+        $user = $request->user();
+        $recognition = Recognition::with('users:id,department_id')->findOrFail($id);
+
+        // Autorización de edición
+        $allowed = false;
+        if ($user->can('edit_any_result')) {
+            $allowed = true;
+        } elseif ($user->can('edit_department_results')) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            $allowed = $deptId && $recognition->users->contains(fn($u) => (int)$u->department_id === (int)$deptId);
+        } elseif ($user->can('edit_own_result')) {
+            $allowed = $recognition->users->contains('id', $user->id);
+        }
+        abort_unless($allowed, 403);
 
         $recognition->update([
             'name' => $validated['name'],
@@ -122,6 +150,23 @@ class RecognitionController extends Controller
         return redirect()
             ->route('recognitions')
             ->with('success', 'Reconocimiento actualizado correctamente.');
+    }
+
+    protected function canEditRecognition(User $user, Recognition $recognition): bool
+    {
+        if ($user->can('edit_any_result')) return true;
+        if ($user->can('edit_department_results')) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            if ($deptId) {
+                $recognition->loadMissing('users:id,department_id');
+                return $recognition->users->contains(fn($u) => (int)$u->department_id === (int)$deptId);
+            }
+        }
+        if ($user->can('edit_own_result')) {
+            $recognition->loadMissing('users:id');
+            return $recognition->users->contains('id', $user->id);
+        }
+        return false;
     }
 
     /**

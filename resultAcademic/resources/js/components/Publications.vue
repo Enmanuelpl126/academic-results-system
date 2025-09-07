@@ -238,7 +238,7 @@
       </div>
       <div class="mt-6 flex justify-end gap-3">
         <button type="button" @click="closeDeleteModal" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Cancelar</button>
-        <button type="button" @click="confirmDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+        <button v-if="canDelete" type="button" @click="confirmDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
       </div>
     </div>
   </div>
@@ -535,6 +535,7 @@ const showDeleteModal = ref(false)
 const publicationToDelete = ref(null)
 
 const openDeleteModal = (publication) => {
+  if (!canDelete.value) return
   publicationToDelete.value = publication || null
   showDeleteModal.value = !!publicationToDelete.value
 }

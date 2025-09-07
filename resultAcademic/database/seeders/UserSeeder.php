@@ -4,8 +4,6 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
@@ -76,22 +74,8 @@ class UserSeeder extends Seeder
 
     public function run(): void
     {
-       
-        $admin = Role::firstOrCreate(['name' => 'admin', ]);
-        $directive = Role::firstOrCreate(['name' => 'directive']);
-        $head_dp = Role::firstOrCreate(['name' => 'head_dp']);
-        $profesor = Role::firstOrCreate(['name' => 'profesor']);
-
-       
-        $edit = Permission::firstOrCreate(['name' => 'edit results']);
-        $delete = Permission::firstOrCreate(['name' => 'delete results']);
-        $create = Permission::firstOrCreate(['name' => 'create results']);
-
-        $edit->syncRoles([$admin, $directive, $head_dp]);
-        $delete->syncRoles([$admin]);
-        $create->syncRoles([$admin, $directive, $head_dp, $profesor]);
-
-       
+        // Los roles y permisos se crean en RolesAndPermissionsSeeder.
+        // Aquí solo creamos/actualizamos usuarios y les asignamos el rol por nombre.
         foreach ($this->users as $userData) {
             $roleName = $userData['role'];
             unset($userData['role']);

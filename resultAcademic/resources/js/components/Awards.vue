@@ -207,7 +207,7 @@
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/2">
                 Autores
               </th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+              <th v-if="showActionsColumn" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
                 Acciones
               </th>
             </tr>
@@ -241,9 +241,10 @@
               </td>
 
               <!-- Acciones -->
-              <td class="px-6 py-4 text-right text-sm font-medium">
+              <td v-if="showActionsColumn" class="px-6 py-4 text-right text-sm font-medium">
                 <div class="flex items-center justify-end gap-2">
                   <button
+                    v-if="award.can_edit"
                     @click="handleEdit(award)"
                     class="text-indigo-600 hover:text-indigo-900 transition-colors"
                     title="Editar premio"
@@ -251,6 +252,7 @@
                     <Edit2Icon :size="16" />
                   </button>
                   <button
+                    v-if="canDelete"
                     @click="openDeleteModal(award)"
                     class="text-red-600 hover:text-red-900 transition-colors"
                     title="Eliminar premio"
@@ -302,7 +304,7 @@
     </div>
     <div class="mt-6 flex justify-end gap-3">
       <button type="button" @click="closeDeleteModal" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Cancelar</button>
-      <button type="button" @click="confirmDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+      <button v-if="canDelete" type="button" @click="confirmDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
     </div>
   </div>
 </div>
@@ -354,6 +356,18 @@ const typeFilter = ref('all')
 const page = usePage()
 const currentUserId = page?.props?.auth?.user?.id ?? null
 const currentUserName = page?.props?.auth?.user?.name ?? null
+
+// Permisos
+const canDelete = computed(() => {
+  const perms = page?.props?.auth?.permissions || []
+  return Array.isArray(perms) && perms.includes('delete_any_result')
+})
+
+// Mostrar/ocultar columna Acciones cuando no hay permisos
+const showActionsColumn = computed(() => {
+  const anyEditable = Array.isArray(filteredAndSortedAwards.value) && filteredAndSortedAwards.value.some(a => a?.can_edit)
+  return canDelete.value || anyEditable
+})
 
 // Formulario con useForm (se envían type, date y authors)
 const form = useForm({

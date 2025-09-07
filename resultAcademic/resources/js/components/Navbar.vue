@@ -19,14 +19,6 @@
             :active="activeSection === item.id"
             @click="handleSectionChange(item.id)"
           />
-          <NavItem
-            v-if="isAdmin"
-            :icon="UsersIcon"
-            label="User Management"
-            :active="activeSection === 'admin'"
-            @click="handleSectionChange('admin')"
-            variant="admin"
-          />
           <!-- Menú de usuario -->
           <div class="relative ml-2" @keydown.escape.stop="isUserMenuOpen = false">
             <button
@@ -55,7 +47,7 @@
               <button
                 v-if="isAdmin"
                 class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                @click="() => { handleSectionChange('admin'); isUserMenuOpen = false }"
+                @click="() => { goAdmin(); isUserMenuOpen = false }"
                 role="menuitem"
               >
                 <UsersIcon :size="18" />
@@ -78,7 +70,7 @@
         <div class="flex items-center gap-2 md:hidden">
           <button
             v-if="isAdmin"
-            @click="handleSectionChange('admin')"
+            @click="goAdmin"
             :class="[
               'inline-flex items-center justify-center p-2 rounded-md',
               activeSection === 'admin'
@@ -116,7 +108,7 @@
               <button
                 v-if="isAdmin"
                 class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                @click="() => { handleSectionChange('admin'); isUserMenuOpenMobile = false }"
+                @click="() => { goAdmin(); isUserMenuOpenMobile = false }"
                 role="menuitem"
               >
                 <UsersIcon :size="18" />
@@ -210,6 +202,10 @@ const currentUser = computed(() => page?.props?.auth?.user ?? null)
 // Determinar si es admin según propiedades comunes (ajusta según tu backend)
 const isAdmin = computed(() => {
   const u = currentUser.value
+  if (!u) return false
+  // Spatie roles array support
+  if (Array.isArray(u.roles) && u.roles.some(r => r?.name === 'admin')) return true
+  // Fallbacks for other shapes
   return u?.role === 'admin' || u?.is_admin === true || u?.isAdmin === true
 })
 
@@ -241,6 +237,11 @@ const handleSectionChange = (section) => {
 // Cierra la sesión del usuario en el backend y deja que el backend redirija al login
 const handleLogout = () => {
   router.post('/logout')
+}
+
+// Navegar a administración de forma directa
+const goAdmin = () => {
+  router.visit('/admin')
 }
 
 // Definición de los elementos principales de navegación

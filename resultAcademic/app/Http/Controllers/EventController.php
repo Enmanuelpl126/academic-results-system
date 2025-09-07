@@ -16,14 +16,32 @@ class EventController extends Controller
      */
     public function index(Request $request): Response
     {
-        // Solo eventos asociados al usuario autenticado, con usuarios
-        $events = Event::with('users:id,name')
-            ->whereHas('users', function ($q) use ($request) {
-                $q->where('users.id', $request->user()->id);
-            })
+        $user = $request->user();
+        $query = Event::with('users:id,name');
+
+        if ($user->can('view_all_results')) {
+            // sin restricciones
+        } elseif ($user->can('view_department_results')) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            if ($deptId) {
+                $query->whereHas('users', function ($q) use ($deptId) {
+                    $q->where('users.department_id', $deptId);
+                });
+            } else {
+                $query->whereHas('users', function ($q) use ($user) {
+                    $q->where('users.id', $user->id);
+                });
+            }
+        } else {
+            $query->whereHas('users', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        }
+
+        $events = $query
             ->orderByDesc('date')
             ->paginate(10)
-            ->through(function (Event $event) {
+            ->through(function (Event $event) use ($user) {
                 return [
                     'id' => $event->id,
                     'name' => $event->name,
@@ -33,6 +51,7 @@ class EventController extends Controller
                     // Autores como arreglo para chips y author_ids para edición
                     'authors' => $event->users->pluck('name')->all(),
                     'author_ids' => $event->users->pluck('id')->all(),
+                    'can_edit' => $this->canEditEvent($user, $event),
                 ];
             });
 
@@ -96,6 +115,19 @@ class EventController extends Controller
         if (!empty($validated['date'])) {
             $validated['date'] = Carbon::parse($validated['date'])->toDateString();
         }
+        // Autorización de edición
+        $user = $request->user();
+        $event->loadMissing('users:id,department_id');
+        $allowed = false;
+        if ($user->can('edit_any_result')) {
+            $allowed = true;
+        } elseif ($user->can('edit_department_results')) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            $allowed = $deptId && $event->users->contains(fn($u) => (int)$u->department_id === (int)$deptId);
+        } elseif ($user->can('edit_own_result')) {
+            $allowed = $event->users->contains('id', $user->id);
+        }
+        abort_unless($allowed, 403);
 
         $event->update([
             'name' => $validated['name'],
@@ -114,6 +146,23 @@ class EventController extends Controller
         return redirect()
             ->route('events')
             ->with('success', 'Evento actualizado correctamente.');
+    }
+
+    protected function canEditEvent(User $user, Event $event): bool
+    {
+        if ($user->can('edit_any_result')) return true;
+        if ($user->can('edit_department_results')) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            if ($deptId) {
+                $event->loadMissing('users:id,department_id');
+                return $event->users->contains(fn($u) => (int)$u->department_id === (int)$deptId);
+            }
+        }
+        if ($user->can('edit_own_result')) {
+            $event->loadMissing('users:id');
+            return $event->users->contains('id', $user->id);
+        }
+        return false;
     }
 
     /**

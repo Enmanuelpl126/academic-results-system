@@ -238,14 +238,16 @@
             <p class="text-sm text-gray-600">{{ Array.isArray(recognition.authors) ? recognition.authors.join(', ') : (recognition.authors || '') }}</p>
             <p class="text-sm text-gray-500">{{ formatDate(recognition.date) }}</p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex gap-2" v-if="recognition.can_edit || canDelete">
             <button
+              v-if="recognition.can_edit"
               @click="handleEdit(recognition)"
               class="text-blue-600 hover:text-blue-900"
             >
               <Edit2Icon :size="18" />
             </button>
             <button
+              v-if="canDelete"
               @click="openDeleteModal(recognition)"
               class="text-red-600 hover:text-red-900"
             >
@@ -259,6 +261,11 @@
     <div v-if="!filteredAndSortedRecognitions.length" class="mt-6 w-full bg-white border border-gray-200 rounded-xl p-6 text-center text-gray-600">
       No hay reconocimientos que coincidan con el criterio de búsqueda
       <span v-if="searchQuery">: "{{ searchQuery }}"</span>.
+    </div>
+
+    <!-- Paginación -->
+    <div class="mt-4 flex justify-end">
+      <Pagination :links="props.recognitions?.links || []" />
     </div>
   </div>
 
@@ -292,7 +299,7 @@
       </div>
       <div class="mt-6 flex justify-end gap-3">
         <button type="button" @click="closeDeleteModal" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Cancelar</button>
-        <button type="button" @click="confirmDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+        <button v-if="canDelete" type="button" @click="confirmDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
       </div>
     </div>
   </div>
@@ -302,6 +309,7 @@
 // Importaciones principales
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { router, usePage, useForm } from '@inertiajs/vue3'
+import Pagination from './Pagination.vue'
 import { 
   Plus as PlusIcon, 
   Edit2 as Edit2Icon, 
@@ -347,6 +355,12 @@ const yearFilter = ref('all')
 const page = usePage()
 const currentUserId = page?.props?.auth?.user?.id ?? null
 const currentUserName = page?.props?.auth?.user?.name ?? null
+
+// Permisos
+const canDelete = computed(() => {
+  const perms = page?.props?.auth?.permissions || []
+  return Array.isArray(perms) && perms.includes('delete_any_result')
+})
 
 // Datos del formulario
 const form = useForm({

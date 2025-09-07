@@ -21,15 +21,33 @@ class PublicationController extends Controller
      */
     public function index(Request $request): Response
     {
-        $userId = $request->user()->id;
+        $user = $request->user();
 
-        $publications = Publication::with(['users:id,name', 'magazine', 'book', 'chapter'])
-            ->whereHas('users', function ($q) use ($userId) {
-                $q->where('users.id', $userId);
-            })
+        $query = Publication::with(['users:id,name', 'magazine', 'book', 'chapter']);
+
+        if ($user->can('view_all_results')) {
+            // sin restricciones
+        } elseif ($user->can('view_department_results')) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            if ($deptId) {
+                $query->whereHas('users', function ($q) use ($deptId) {
+                    $q->where('users.department_id', $deptId);
+                });
+            } else {
+                $query->whereHas('users', function ($q) use ($user) {
+                    $q->where('users.id', $user->id);
+                });
+            }
+        } else {
+            $query->whereHas('users', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        }
+
+        $publications = $query
             ->orderByDesc('date')
             ->paginate(10)
-            ->through(function ($p) {
+            ->through(function ($p) use ($user) {
                 $base = [
                     'id' => $p->id,
                     'name' => $p->name,
@@ -37,6 +55,7 @@ class PublicationController extends Controller
                     'type' => $p->type,
                     'authors' => $p->users->pluck('name')->all(),
                     'author_ids' => $p->users->pluck('id')->all(),
+                    'can_edit' => $this->canEditPublication($user, $p),
                 ];
 
                 // Mapear detalles según tipo
@@ -46,7 +65,6 @@ class PublicationController extends Controller
                         'number' => $p->magazine->number,
                         'volume' => $p->magazine->volume,
                         'doi' => $p->magazine->doi,
-                        // 'url' opcional si existe en tu esquema
                     ]);
                 } elseif ($p->type === 'Libro' && $p->book) {
                     $base = array_merge($base, [
@@ -207,6 +225,20 @@ class PublicationController extends Controller
         ];
         $normalizedType = $typeMap[$validated['type']] ?? $validated['type'];
 
+        // Autorización de edición
+        $user = $request->user();
+        $publication->loadMissing('users:id,department_id');
+        $allowed = false;
+        if ($user->can('edit_any_result')) {
+            $allowed = true;
+        } elseif ($user->can('edit_department_results')) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            $allowed = $deptId && $publication->users->contains(fn($u) => (int)$u->department_id === (int)$deptId);
+        } elseif ($user->can('edit_own_result')) {
+            $allowed = $publication->users->contains('id', $user->id);
+        }
+        abort_unless($allowed, 403);
+
         // Actualizar publicación base
         $publication->update([
             'name' => $validated['name'],
@@ -269,6 +301,23 @@ class PublicationController extends Controller
         return redirect()
             ->route('publications')
             ->with('success', 'Publicación actualizada correctamente');
+    }
+
+    protected function canEditPublication(User $user, Publication $publication): bool
+    {
+        if ($user->can('edit_any_result')) return true;
+        if ($user->can('edit_department_results')) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            if ($deptId) {
+                $publication->loadMissing('users:id,department_id');
+                return $publication->users->contains(fn($u) => (int)$u->department_id === (int)$deptId);
+            }
+        }
+        if ($user->can('edit_own_result')) {
+            $publication->loadMissing('users:id');
+            return $publication->users->contains('id', $user->id);
+        }
+        return false;
     }
 
     /**
