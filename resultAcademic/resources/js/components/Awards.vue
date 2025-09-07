@@ -35,7 +35,7 @@
             class="w-full sm:w-auto border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option v-for="type in awardTypes" :key="type" :value="type">
-              {{ type === 'all' ? 'All Types' : type.charAt(0).toUpperCase() + type.slice(1) }}
+              {{ type === 'all' ? 'Todos los tipos' : type }}
             </option>
           </select>
         </div>
@@ -68,14 +68,13 @@
                   Tipo de Premio <span class="text-red-500">*</span>
                 </div>
               </label>
-              <select
+              <input
+                type="text"
                 v-model="form.type"
                 class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder="Escriba el tipo de premio"
                 required
-              >
-                <option value="Academia de Ciencias de Cuba">Academia de Ciencias de Cuba</option>
-                <option value="CITMA Provincial">CITMA Provincial</option>
-              </select>
+              />
               <p v-if="form.errors.type" class="text-sm text-red-600 mt-1">{{ form.errors.type }}</p>
             </div>
 
@@ -371,7 +370,7 @@ const showActionsColumn = computed(() => {
 
 // Formulario con useForm (se envían type, date y authors)
 const form = useForm({
-  type: 'Academia de Ciencias de Cuba',
+  type: '',
   date: '',
   authors: currentUserId ? [currentUserId] : []
 })
@@ -386,8 +385,15 @@ watch(
   }
 )
 
-// Tipos de premios disponibles (para filtros)
-const awardTypes = ['all', 'Academia de Ciencias de Cuba', 'CITMA Provincial']
+// Tipos de premios disponibles (para filtros) dinámicos según los datos cargados
+const awardTypes = computed(() => {
+  const set = new Set(
+    (awards.value || [])
+      .map(a => (a.type || '').trim())
+      .filter(Boolean)
+  )
+  return ['all', ...Array.from(set).sort((a, b) => a.localeCompare(b))]
+})
 
 // Computed: Lista filtrada y ordenada de premios
 const filteredAndSortedAwards = computed(() => {
@@ -503,7 +509,7 @@ const closeForm = () => {
   editingId.value = null
   form.reset()
   form.clearErrors()
-  form.type = 'Academia de Ciencias de Cuba'
+  form.type = ''
   form.authors = currentUserId ? [currentUserId] : []
   showUserDropdown.value = false
 }

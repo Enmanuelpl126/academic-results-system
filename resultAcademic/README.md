@@ -1,6 +1,10 @@
 # Resultados Académicos
 
-Aplicación Laravel 11 con Inertia.js (Vue 3) para gestionar resultados académicos: publicaciones, eventos, premios y reconocimientos. Incluye control de acceso basado en roles y permisos con Spatie Permission, paginación en español, y UI moderna.
+**Autor:** Enmanuel Piñero Linares 
+**Contacto:** pinerolinaresenmanuel@gmail.com
+**Año:** 2025
+
+Aplicación Laravel 11 con Inertia.js (Vue 3) para gestionar resultados académicos: publicaciones, eventos, premios y reconocimientos. Incluye control de acceso basado en roles y permisos con Spatie Permission, paginación , y UI moderna.
 
 ## Tecnologías
 - Laravel 11
@@ -129,5 +133,5 @@ npm run dev
 npm run build
 ```
 
-## Licencia
-Este proyecto se distribuye bajo la licencia MIT (o especifica la que corresponda).
+
+

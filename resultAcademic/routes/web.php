@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome');
+    return auth()->check()
+        ? redirect()->route('publications')
+        : redirect()->route('login');
 })->name('home');
 
 
@@ -33,7 +35,7 @@ Route::delete('/awards/{id}', [AwardController::class, 'destroy'])
 
 // Búsqueda de usuarios para autocompletar (combobox)
 Route::get('/users/search', [UserController::class, 'search'])
-    ->middleware(['auth', 'verified', 'permission:view_all_users'])
+    ->middleware(['auth', 'verified'])
     ->name('users.search');
 
 Route::get('/recognitions', [RecognitionController::class, 'index'])
@@ -80,7 +82,7 @@ Route::delete('/events/{event}', [EventController::class, 'destroy'])
     ->name('events.destroy');
 
 Route::get('dashboard', function () {
-    return Inertia::render('Dashboard');
+    return redirect()->route('publications');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 // Rutas de administración

@@ -81,7 +81,6 @@ class AwardController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::in(['Academia de Ciencias de Cuba', 'CITMA Provincial'])
             ],
             'date' => ['required', 'date'],
             'authors' => ['required', 'array', 'min:1'],
@@ -135,7 +134,6 @@ class AwardController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::in(['Academia de Ciencias de Cuba', 'CITMA Provincial'])
             ],
             'date' => ['required', 'date'],
             'authors' => ['required', 'array', 'min:1'],

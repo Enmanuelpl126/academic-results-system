@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 class UserController extends Controller
 {
@@ -18,16 +19,27 @@ class UserController extends Controller
         $perPage = (int) $request->query('per_page', 15);
         $perPage = $perPage > 0 && $perPage <= 50 ? $perPage : 15;
 
-        $query = User::select('id', 'name')->orderBy('name');
+        $query = User::query()
+            ->select('id', 'name', 'department_id')
+            ->where(function ($q2) {
+                // Mostrar solo usuarios habilitados si la columna existe
+                if (Schema::hasColumn('users', 'is_enabled')) {
+                    $q2->where('is_enabled', true);
+                }
+            })
+            ->orderBy('name');
 
+        // Búsqueda por nombre
         if ($q !== '') {
             $query->where('name', 'like', "%{$q}%");
         }
 
+        // Sin restricciones por rol/departamento: se listan todos los usuarios habilitados
+
         $paginator = $query->paginate($perPage);
 
         return response()->json([
-            'data' => $paginator->items(),
+            'data' => collect($paginator->items())->map(fn($u) => ['id' => $u->id, 'name' => $u->name])->all(),
             'current_page' => $paginator->currentPage(),
             'next_page_url' => $paginator->nextPageUrl(),
             'prev_page_url' => $paginator->previousPageUrl(),
