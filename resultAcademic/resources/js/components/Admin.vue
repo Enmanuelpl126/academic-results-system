@@ -294,7 +294,7 @@
                   <Edit2Icon :size="18" />
                 </button>
                 <button
-                  @click="deleteDepartment(department)"
+                  @click="openDepartmentDeleteModal(department)"
                   class="text-red-600 hover:text-red-900"
                 >
                   <Trash2Icon :size="18" />
@@ -410,7 +410,7 @@
               :class="['w-full rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500', formErrors.role ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300']"
               required
             >
-              <option v-for="role in roles" :key="role.id" :value="role.id">
+              <option v-for="role in rolesForUserForm" :key="role.id" :value="role.id">
                 {{ role.label }}
               </option>
             </select>
@@ -479,7 +479,7 @@
               minlength="8"
               autocomplete="new-password"
               name="new-password"
-              pattern="^(?=.*[A-Za-z])(?=.*\\d)(?=.*[^A-Za-z\\d]).{8,}$"
+              pattern="^(?=.*[A-Za-z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$"
               title="Debe contener al menos una letra, un número y un carácter especial"
               :required="!editingUserId || changePassword"
             />
@@ -494,7 +494,7 @@
               minlength="8"
               autocomplete="new-password"
               name="new-password-confirmation"
-              pattern="^(?=.*[A-Za-z])(?=.*\\d)(?=.*[^A-Za-z\\d]).{8,}$"
+              pattern="^(?=.*[A-Za-z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$"
               title="Debe contener al menos una letra, un número y un carácter especial"
               :required="!editingUserId || changePassword"
             />
@@ -553,6 +553,25 @@
             placeholder="Descripción del departamento (opcional)"
           ></textarea>
         </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Jefe de Departamento (opcional)</label>
+          <select
+            v-model="departmentFormData.head_user_id"
+            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          >
+            <option value="">Sin jefe asignado</option>
+            <template v-if="editingDepartmentId">
+              <option v-for="u in eligibleUsersForHeadInEdit" :key="u.id" :value="String(u.id)">
+                {{ u.name }} — {{ u.email }}
+              </option>
+            </template>
+            <template v-else>
+              <option v-for="u in usersWithoutDepartment" :key="u.id" :value="String(u.id)">
+                {{ u.name }} — {{ u.email }}
+              </option>
+            </template>
+          </select>
+        </div>
         
         <div class="flex justify-end gap-3 pt-4">
           <button
@@ -610,6 +629,36 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal de confirmación de eliminación de Departamento -->
+  <div
+    v-if="showDepartmentDeleteModal"
+    class="fixed inset-0 z-50 flex items-center justify-center"
+    aria-modal="true"
+    role="dialog"
+  >
+    <!-- Overlay -->
+    <div class="absolute inset-0 bg-black/40" @click.self="closeDepartmentDeleteModal"></div>
+    <!-- Contenido -->
+    <div class="relative z-10 w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+      <div class="flex items-start gap-3">
+        <div class="flex-1">
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Confirmar eliminación</h3>
+          <p class="text-sm text-gray-600 mb-3">
+            ¿Seguro que deseas eliminar este departamento? Los usuarios pasarán a no tener departamento y se actualizará el rol del jefe a Profesor.
+          </p>
+          <div v-if="departmentToDelete" class="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <div><span class="font-medium text-gray-900">Nombre:</span> {{ departmentToDelete.name }}</div>
+            <div v-if="departmentToDelete.description"><span class="font-medium text-gray-900">Descripción:</span> {{ departmentToDelete.description }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end gap-3">
+        <button type="button" @click="closeDepartmentDeleteModal" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Cancelar</button>
+        <button type="button" @click="confirmDepartmentDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -645,6 +694,36 @@ const props = defineProps({
 // Estado reactivo
 const activeSection = ref('users')
 const users = ref([...(props.initialUsers || [])])
+
+// Usuarios que no tienen departamento asignado (para jefe de departamento)
+const usersWithoutDepartment = computed(() => {
+  return (users.value || []).filter(u => (u?.is_enabled !== false) && !u?.department_id && !u?.department?.id)
+})
+// Miembros habilitados del departamento en edición
+const usersInEditingDepartment = computed(() => {
+  if (!editingDepartmentId.value) return []
+  return (users.value || []).filter(u => (u?.is_enabled !== false) && (String(u?.department_id || u?.department?.id || '') === String(editingDepartmentId.value)))
+})
+// Saber si el departamento en edición tiene jefe actualmente
+const editingDepartmentHasHead = computed(() => {
+  if (!editingDepartmentId.value) return false
+  const dep = (departments.value || []).find(d => String(d.id) === String(editingDepartmentId.value))
+  return !!(dep && dep.head_of_department_id)
+})
+// Usuarios elegibles para jefe durante la edición
+const eligibleUsersForHeadInEdit = computed(() => {
+  if (!editingDepartmentId.value) return []
+  const base = usersInEditingDepartment.value
+  if (editingDepartmentHasHead.value) {
+    return base
+  }
+  // Si no tiene jefe, combinar con usuarios sin departamento, evitando duplicados
+  const extra = usersWithoutDepartment.value
+  const ids = new Set(base.map(u => String(u.id)))
+  const combined = [...base]
+  extra.forEach(u => { if (!ids.has(String(u.id))) combined.push(u) })
+  return combined
+})
 const departments = ref([...(props.initialDepartments || [])])
 
 // Mantener sincronizados los datos locales con las props de Inertia tras reloads parciales
@@ -684,6 +763,9 @@ const selectedUser = ref(null)
 // Estado para confirmar habilitar/deshabilitar
 const showStatusModal = ref(false)
 const userToToggle = ref(null)
+// Estado para confirmación de eliminación de departamento
+const showDepartmentDeleteModal = ref(false)
+const departmentToDelete = ref(null)
 
 // Usuario autenticado (para evitar auto-deshabilitar)
 const page = usePage()
@@ -704,7 +786,8 @@ const userFormData = ref({
 
 const departmentFormData = ref({
   name: '',
-  description: ''
+  description: '',
+  head_user_id: ''
 })
 
 // Roles del sistema (Spatie) según seeder, etiquetados en español
@@ -714,6 +797,16 @@ const roles = ref([
   { id: 'head_dp', label: 'Jefe de Departamento' },
   { id: 'profesor', label: 'Profesor' },
 ])
+
+// Roles disponibles en el formulario de usuario
+// En creación NO permitir seleccionar 'Jefe de Departamento'
+const rolesForUserForm = computed(() => {
+  const all = roles.value || []
+  if (!editingUserId.value) {
+    return all.filter(r => r.id !== 'head_dp')
+  }
+  return all
+})
 
 // Computed
 const filteredUsers = computed(() => {
@@ -970,7 +1063,8 @@ const openDepartmentForm = () => {
   editingDepartmentId.value = null
   departmentFormData.value = {
     name: '',
-    description: ''
+    description: '',
+    head_user_id: ''
   }
   showDepartmentForm.value = true
 }
@@ -979,7 +1073,16 @@ const editDepartment = (department) => {
   editingDepartmentId.value = department.id
   departmentFormData.value = {
     name: department.name,
-    description: department.description || ''
+    description: department.description || '',
+    head_user_id: department.head_of_department_id ? String(department.head_of_department_id) : ''
+  }
+  // Si el departamento no tiene jefe o el jefe guardado no es miembro habilitado, no preseleccionar
+  const currentHead = departmentFormData.value.head_user_id
+  if (
+    !currentHead ||
+    !usersInEditingDepartment.value.some(u => String(u.id) === String(currentHead))
+  ) {
+    departmentFormData.value.head_user_id = ''
   }
   showDepartmentForm.value = true
 }
@@ -993,29 +1096,48 @@ const handleDepartmentSubmit = () => {
   const payload = { ...departmentFormData.value }
   
   if (editingDepartmentId.value) {
-    router.put(`/admin/departments/${editingDepartmentId.value}`, payload, {
+    const updatePayload = { ...payload }
+    // En edición, enviar head_user_id (puede ser vacío para limpiar)
+    updatePayload.head_user_id = departmentFormData.value.head_user_id || ''
+    router.put(`/admin/departments/${editingDepartmentId.value}`, updatePayload, {
       onSuccess: () => {
         closeDepartmentForm()
-        router.reload({ only: ['initialDepartments'] })
+        router.reload({ only: ['initialDepartments', 'initialUsers'] })
       }
     })
   } else {
-    router.post('/admin/departments', payload, {
+    // Incluir jefe si está seleccionado
+    const createPayload = { ...payload }
+    if (departmentFormData.value.head_user_id) {
+      createPayload.head_user_id = departmentFormData.value.head_user_id
+    }
+    router.post('/admin/departments', createPayload, {
       onSuccess: () => {
         closeDepartmentForm()
-        router.reload({ only: ['initialDepartments'] })
+        router.reload({ only: ['initialDepartments', 'initialUsers'] })
       }
     })
   }
 }
 
-const deleteDepartment = (department) => {
-  if (confirm(`¿Seguro que deseas eliminar el departamento "${department.name}"?`)) {
-    router.delete(`/admin/departments/${department.id}`, {
-      onSuccess: () => {
-        router.reload({ only: ['initialDepartments'] })
-      }
-    })
-  }
+const openDepartmentDeleteModal = (department) => {
+  departmentToDelete.value = department
+  showDepartmentDeleteModal.value = true
+}
+
+const closeDepartmentDeleteModal = () => {
+  showDepartmentDeleteModal.value = false
+  departmentToDelete.value = null
+}
+
+const confirmDepartmentDelete = () => {
+  if (!departmentToDelete.value) return
+  const id = departmentToDelete.value.id
+  router.delete(`/admin/departments/${id}`, {
+    onSuccess: () => {
+      closeDepartmentDeleteModal()
+      router.reload({ only: ['initialDepartments', 'initialUsers'] })
+    }
+  })
 }
 </script>

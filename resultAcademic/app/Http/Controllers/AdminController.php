@@ -37,7 +37,8 @@ class AdminController extends Controller
             // Usar Spatie Roles por nombre (admin, directive, head_dp, profesor, ...)
             'role' => ['required', 'exists:roles,name'],
             // Complejidad: letras, números y caracteres especiales, mínimo 8
-            'password' => ['required', 'string', 'min:8', 'confirmed', 'regex:/^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/'],
+            // Usamos [0-9] y [^A-Za-z0-9] para máxima compatibilidad
+            'password' => ['required', 'string', 'min:8', 'confirmed', 'regex:/^(?=.*[A-Za-z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/'],
         ], [
             'password.regex' => 'La contraseña debe contener al menos una letra, un número y un carácter especial.',
         ]);
@@ -75,7 +76,7 @@ class AdminController extends Controller
             // Spatie role name
             'role' => ['required', 'exists:roles,name'],
             // Optional password change respecting same complexity
-            'password' => ['nullable', 'string', 'min:8', 'confirmed', 'regex:/^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed', 'regex:/^(?=.*[A-Za-z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,}$/'],
         ], [
             'password.regex' => 'La contraseña debe contener al menos una letra, un número y un carácter especial.',
         ]);

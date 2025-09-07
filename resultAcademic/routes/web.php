@@ -94,9 +94,9 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->name('admin.')->group(
     Route::delete('/users/{id}', [App\Http\Controllers\AdminController::class, 'destroyUser'])->name('users.destroy');
     
     // Gestión de departamentos
-    Route::post('/departments', [App\Http\Controllers\AdminController::class, 'storeDepartment'])->name('departments.store');
-    Route::put('/departments/{id}', [App\Http\Controllers\AdminController::class, 'updateDepartment'])->name('departments.update');
-    Route::delete('/departments/{id}', [App\Http\Controllers\AdminController::class, 'destroyDepartment'])->name('departments.destroy');
+    Route::post('/departments', [App\Http\Controllers\DepartmentController::class, 'store'])->name('departments.store');
+    Route::put('/departments/{id}', [App\Http\Controllers\DepartmentController::class, 'update'])->name('departments.update');
+    Route::delete('/departments/{id}', [App\Http\Controllers\DepartmentController::class, 'destroy'])->name('departments.destroy');
 });
 
 require __DIR__.'/settings.php';
