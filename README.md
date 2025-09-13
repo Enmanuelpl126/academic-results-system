@@ -11,9 +11,42 @@ Aplicación Laravel 11 con Inertia.js (Vue 3) para gestionar resultados académi
 - PHP >= 8.2
 
 ## Características clave
-- Roles y permisos con Spatie:
+- Gestión de roles y permisos (Spatie):
+  - Definición centralizada de permisos y roles en `database/seeders/RolesAndPermissionsSeeder.php`.
+  - Alias de middleware registrados en `resultAcademic/bootstrap/app.php` (`role`, `permission`, `role_or_permission`).
+  - Rutas protegidas usando `permission:*` según el caso (ver `resultAcademic/routes/web.php`).
+
 - Alcance de datos por permisos (backend):
+  - Listados y operaciones CRUD aplican filtros por rol/permisos: ver todos, por departamento o solo propios.
+  - Controladores validan el permiso correspondiente antes de permitir edición/eliminación.
+
 - UI condicionada por permisos (frontend):
+  - Componentes Vue muestran/ocultan acciones según `auth.roles` y `auth.permissions` compartidos por Inertia.
+  - Botones de crear/editar/eliminar y accesos de administración se renderizan de forma condicional.
+
+- Módulos de resultados académicos:
+  - Publicaciones, Eventos, Premios y Reconocimientos con CRUD completo y validación.
+  - Búsqueda y filtros básicos (por usuario y/o departamento cuando aplique).
+
+- Paginación y UX coherente:
+  - Componente `resources/js/components/Pagination.vue` en español, reutilizable en listados.
+  - Diseño responsivo con TailwindCSS.
+
+- Administración del sistema:
+  - Área bajo `/admin` con permiso agregado `admin_system` que encapsula la gestión de usuarios, roles/permisos y departamentos.
+  - Política de usuarios: habilitar/deshabilitar vía `is_enabled` (sin borrado definitivo) y prevención de auto-deshabilitado para administradores.
+
+- Arquitectura Laravel + Inertia (SPA ligera):
+  - Renderizado del lado del servidor con Inertia y vistas en Vue 3.
+  - Estados de autenticación compartidos y navegación sin recarga completa.
+
+- Semillas de datos para inicio rápido:
+  - Seeders crean roles, permisos, departamentos, usuarios de ejemplo y datos de demostración.
+  - Contraseña por defecto para usuarios de ejemplo: `password`.
+
+- Preparado para despliegue:
+  - Scripts y pasos de cacheo (`config:cache`, `route:cache`, `view:cache`).
+  - Build de frontend con `npm run build`.
 
 
 ## Requisitos previos
@@ -24,7 +57,7 @@ Aplicación Laravel 11 con Inertia.js (Vue 3) para gestionar resultados académi
 
 ## Configuración del proyecto (paso a paso)
 
-Estas instrucciones cubren Windows con XAMPP y también funcionan en otros entornos (Linux/Mac) con los comandos equivalentes.
+Estas instrucciones cubren Windows con XAMPP.
 
 1) Clonar el repositorio e instalar dependencias
 ```
