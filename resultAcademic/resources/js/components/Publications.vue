@@ -5,6 +5,7 @@
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
       <h2 class="text-2xl font-bold text-gray-900">Publicaciones Científicas</h2>
       <button
+        v-if="canCreate"
         @click="showForm = true"
         class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
       >
@@ -326,6 +327,23 @@ const filteredAndSortedPublications = computed(() => {
       }
       return sortDirection.value === 'asc' ? comparison : -comparison
     })
+})
+
+// Permiso de eliminación desde props de Inertia (any/department/own)
+const canDelete = computed(() => {
+  const perms = page?.props?.auth?.permissions || []
+  if (!Array.isArray(perms)) return false
+  return (
+    perms.includes('delete_any_result') ||
+    perms.includes('delete_department_result') ||
+    perms.includes('delete_own_result')
+  )
+})
+
+// Permiso de creación
+const canCreate = computed(() => {
+  const perms = page?.props?.auth?.permissions || []
+  return Array.isArray(perms) && perms.includes('create_result')
 })
 
 // Métodos

@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 class AdminController extends Controller
 {
@@ -17,9 +19,106 @@ class AdminController extends Controller
         $users = User::with(['department', 'roles'])->get();
         $departments = Department::withCount('users')->get();
 
+        // Cargar roles y permisos para la interfaz de administración
+        // Traducciones de roles para mostrar en la UI
+        $roleLabels = [
+            'admin' => 'Administrador',
+            'directive' => 'Directivo',
+            'head_dp' => 'Jefe de Departamento',
+            'profesor' => 'Profesor',
+        ];
+
+        $roles = Role::withCount('users')->get()->map(function ($r) use ($roleLabels) {
+            return [
+                'id' => $r->name,
+                'label' => $roleLabels[$r->name] ?? ucfirst(str_replace('_', ' ', $r->name)),
+                'description' => '',
+                'users_count' => $r->users()->count(),
+                'permissions' => $r->permissions()->pluck('name'),
+            ];
+        });
+
+        // Mapa de permisos a etiquetas amigables en español
+        $permissionLabels = [
+            'view_all_results' => 'Ver todos los resultados',
+            'view_department_results' => 'Ver resultados del departamento',
+            'view_own_results' => 'Ver mis resultados',
+            'create_result' => 'Crear resultado',
+            'edit_any_result' => 'Editar cualquier resultado',
+            'edit_department_result' => 'Editar resultados del departamento',
+            'edit_own_result' => 'Editar mis resultados',
+            'delete_any_result' => 'Eliminar cualquier resultado',
+            'delete_department_result' => 'Eliminar resultados del departamento',
+            'delete_own_result' => 'Eliminar mis resultados',
+            'manage_users' => 'Gestionar usuarios',
+            'assign_roles' => 'Asignar roles',
+            'view_all_users' => 'Ver todos los usuarios',
+            'create_department' => 'Crear departamento',
+            'edit_department' => 'Editar departamento',
+            'delete_department' => 'Eliminar departamento',
+            'view_all_departments' => 'Ver todos los departamentos',
+            'manage_roles_permissions' => 'Gestionar roles y permisos',
+        ];
+
+        $permissions = Permission::all()->map(function ($p) use ($permissionLabels) {
+            return [
+                'name' => $p->name,
+                'label' => $permissionLabels[$p->name] ?? ucfirst(str_replace('_', ' ', $p->name)),
+            ];
+        });
+
         return Inertia::render('Admin', [
             'initialUsers' => $users,
-            'initialDepartments' => $departments
+            'initialDepartments' => $departments,
+            'initialRoles' => $roles,
+            'initialPermissions' => $permissions,
+        ]);
+    }
+
+    // Listar roles y permisos (retorna Inertia con datos para la UI)
+    public function rolesIndex()
+    {
+        $roles = Role::withCount('users')->get()->map(function ($r) {
+            return [
+                'id' => $r->name,
+                'label' => ucfirst(str_replace('_', ' ', $r->name)),
+                'description' => '',
+                'users_count' => $r->users()->count(),
+                'permissions' => $r->permissions()->pluck('name'),
+            ];
+        });
+
+        $permissionLabels = [
+            'view_all_results' => 'Ver todos los resultados',
+            'view_department_results' => 'Ver resultados del departamento',
+            'view_own_results' => 'Ver mis resultados',
+            'create_result' => 'Crear resultado',
+            'edit_any_result' => 'Editar cualquier resultado',
+            'edit_department_result' => 'Editar resultados del departamento',
+            'edit_own_result' => 'Editar mis resultados',
+            'delete_any_result' => 'Eliminar cualquier resultado',
+            'delete_department_result' => 'Eliminar resultados del departamento',
+            'delete_own_result' => 'Eliminar mis resultados',
+            'manage_users' => 'Gestionar usuarios',
+            'assign_roles' => 'Asignar roles',
+            'view_all_users' => 'Ver todos los usuarios',
+            'create_department' => 'Crear departamento',
+            'edit_department' => 'Editar departamento',
+            'delete_department' => 'Eliminar departamento',
+            'view_all_departments' => 'Ver todos los departamentos',
+            'manage_roles_permissions' => 'Gestionar roles y permisos',
+        ];
+
+        $permissions = Permission::all()->map(function ($p) use ($permissionLabels) {
+            return [
+                'name' => $p->name,
+                'label' => $permissionLabels[$p->name] ?? ucfirst(str_replace('_', ' ', $p->name)),
+            ];
+        });
+
+        return Inertia::render('Admin', [
+            'initialRoles' => $roles,
+            'initialPermissions' => $permissions,
         ]);
     }
 
@@ -185,5 +284,96 @@ class AdminController extends Controller
         $department->delete();
 
         return redirect()->route('admin.index')->with('success', 'Departamento eliminado correctamente.');
+    }
+
+    // Crear un rol nuevo y asignar permisos
+    public function storeRole(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9_\-]+$/', 'unique:roles,name'],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', 'exists:permissions,name'],
+        ], [
+            'name.regex' => 'El nombre del rol solo puede contener letras minúsculas, números, guiones bajos o guiones.',
+        ]);
+
+        $role = Role::create(['name' => $validated['name'], 'guard_name' => 'web']);
+        if (!empty($validated['permissions'])) {
+            $role->syncPermissions($validated['permissions']);
+        }
+
+        // Limpiar caché de permisos de Spatie para que los cambios sean visibles de inmediato
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        if ($request->wantsJson() || $request->expectsJson()) {
+            return response()->json(['success' => true, 'role' => $role], 201);
+        }
+
+        return redirect()->route('admin.index')->with('success', 'Rol creado correctamente.');
+    }
+
+    // Actualizar permisos de un rol
+    public function updateRole(Request $request, string $id)
+    {
+        try {
+            $role = Role::findByName($id);
+        } catch (\Exception $e) {
+            if ($request->wantsJson() || $request->expectsJson()) {
+                return response()->json(['error' => 'Rol no encontrado.'], 404);
+            }
+            return redirect()->route('admin.index')->with('error', 'Rol no encontrado.');
+        }
+
+        $validated = $request->validate([
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', 'exists:permissions,name'],
+        ]);
+
+        $role->syncPermissions($validated['permissions'] ?? []);
+
+        // Limpiar caché de permisos de Spatie para que los cambios sean visibles de inmediato
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        if ($request->wantsJson() || $request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('admin.index')->with('success', 'Permisos del rol actualizados.');
+    }
+
+    // Eliminar rol
+    public function destroyRole(string $id)
+    {
+        try {
+            $role = Role::findByName($id);
+        } catch (\Exception $e) {
+            if (request()->wantsJson() || request()->expectsJson()) {
+                return response()->json(['error' => 'Rol no encontrado.'], 404);
+            }
+            return redirect()->route('admin.index')->with('error', 'Rol no encontrado.');
+        }
+
+        // Evitar eliminar rol admin
+        if ($role->name === 'admin') {
+            if (request()->wantsJson() || request()->expectsJson()) {
+                return response()->json(['error' => 'No se puede eliminar el rol administrador.'], 403);
+            }
+            return redirect()->route('admin.index')->with('error', 'No se puede eliminar el rol administrador.');
+        }
+
+        // Reasignar usuarios con este rol a 'profesor' por defecto antes de eliminar
+        $default = Role::where('name', 'profesor')->first();
+        foreach ($role->users as $user) {
+            $user->removeRole($role->name);
+            if ($default) $user->assignRole($default->name);
+        }
+
+        $role->delete();
+
+        if (request()->wantsJson() || request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('admin.index')->with('success', 'Rol eliminado correctamente.');
     }
 }

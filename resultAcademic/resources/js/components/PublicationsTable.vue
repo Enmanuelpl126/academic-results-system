@@ -125,7 +125,7 @@
                 
                 <!-- Capítulo de Libro -->
                 <div v-else-if="publication.type === 'Capitulo de Libro'">
-                  <div class="text-xs">En: {{ publication.bookName }}</div>
+                  <div class="text-xs">Libro: {{ publication.bookName }}</div>
                   <div class="text-xs">Autor del Libro: {{ publication.bookAuthor }}</div>
                   <div class="text-xs">Editorial: {{ publication.publisher }}</div>
                   <div class="text-xs" v-if="publication.city">Ciudad: {{ publication.city }}</div>
@@ -220,7 +220,12 @@ const emit = defineEmits(['sort', 'edit', 'delete'])
 const page = usePage()
 const canDelete = computed(() => {
   const perms = page?.props?.auth?.permissions || []
-  return Array.isArray(perms) && perms.includes('delete_any_result')
+  if (!Array.isArray(perms)) return false
+  return (
+    perms.includes('delete_any_result') ||
+    perms.includes('delete_department_result') ||
+    perms.includes('delete_own_result')
+  )
 })
 
 // Mostrar/ocultar la columna de acciones cuando no hay permisos de edición ni eliminación

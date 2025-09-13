@@ -90,6 +90,37 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal de confirmación de eliminación de Rol -->
+  <div
+    v-if="showRoleDeleteModal"
+    class="fixed inset-0 z-50 flex items-center justify-center"
+    aria-modal="true"
+    role="dialog"
+  >
+    <!-- Overlay -->
+    <div class="absolute inset-0 bg-black/40" @click.self="closeRoleDeleteModal"></div>
+    <!-- Contenido -->
+    <div class="relative z-10 w-full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+      <div class="flex items-start gap-3">
+        <div class="flex-1">
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Confirmar eliminación</h3>
+          <p class="text-sm text-gray-600 mb-3">
+            ¿Seguro que deseas eliminar este rol? Los usuarios serán reasignados al rol <strong>'Profesor'</strong>.
+          </p>
+          <div v-if="roleToDelete" class="text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <div><span class="font-medium text-gray-900">Rol:</span> {{ roleToDelete.label }} ({{ roleToDelete.id }})</div>
+            <div v-if="typeof roleToDelete.users_count !== 'undefined'"><span class="font-medium text-gray-900">Usuarios asignados:</span> {{ roleToDelete.users_count }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end gap-3">
+        <button type="button" @click="closeRoleDeleteModal" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Cancelar</button>
+        <button type="button" @click="confirmRoleDelete" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
     </div>
 
     <!-- Contenido principal -->
@@ -314,8 +345,20 @@
       <!-- Vista de Roles -->
       <div v-if="activeSection === 'roles'">
         <div class="mb-6">
-          <h3 class="text-2xl font-bold text-gray-900 mb-2">Gestión de Roles</h3>
-          <p class="text-gray-600">Administra los roles y permisos del sistema</p>
+            <div class="mb-10">
+
+            </div>
+           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+             <h3 class="text-2xl font-bold text-gray-900 mb-2">Gestión de Roles</h3>
+             
+            <button
+              @click="openRoleForm"
+              class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
+            >
+              <PlusIcon :size="20" />
+              Agregar Rol
+            </button>
+          </div>
         </div>
 
         <!-- Grid de roles -->
@@ -328,10 +371,35 @@
                   <h4 class="text-lg font-semibold text-gray-900">{{ role.label }}</h4>
                 </div>
                 <p class="text-sm text-gray-600 mb-3">{{ role.description }}</p>
-                <div class="flex items-center gap-2 text-sm text-gray-500">
+                <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
                   <UsersIcon :size="16" class="text-gray-400" />
                   {{ role.users_count || 0 }} usuarios
                 </div>
+                <div class="flex flex-wrap gap-2">
+                  <template v-if="role.permissions && role.permissions.length">
+                    <span v-for="(pName, idx) in role.permissions.slice(0,4)" :key="pName" class="px-2 py-1 bg-gray-100 text-xs rounded-full text-gray-700">{{ getPermissionLabel(pName) }}</span>
+                    <span v-if="role.permissions.length > 4" class="px-2 py-1 bg-gray-50 text-xs rounded-full text-gray-500">+{{ role.permissions.length - 4 }} más</span>
+                  </template>
+                  <template v-else>
+                    <span class="text-sm text-gray-400">Sin permisos asignados</span>
+                  </template>
+                </div>
+              </div>
+              <div class="flex gap-2 ml-3 shrink-0">
+                <button @click="editRole(role)" class="text-blue-600 hover:text-blue-900">
+                  <Edit2Icon :size="18" />
+                </button>
+                <button
+                  @click="confirmDeleteRole(role)"
+                  :disabled="role.id === 'admin'"
+                  :title="role.id === 'admin' ? 'No se puede eliminar el rol administrador' : 'Eliminar rol'"
+                  :class="[
+                    'transition-colors',
+                    role.id === 'admin' ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-900'
+                  ]"
+                >
+                  <Trash2Icon :size="18" />
+                </button>
               </div>
             </div>
           </div>
@@ -339,6 +407,8 @@
       </div>
     </div>
   </div>
+
+  
 
   <!-- Modal de formulario de usuario -->
   <div v-if="showUserForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -522,6 +592,64 @@
     </div>
   </div>
 
+  <!-- Modal de formulario de Rol (estilo uniforme con Usuario/Departamento) -->
+  <div v-if="showForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-gray-900">{{ editingRoleId ? 'Editar Rol' : 'Agregar Rol' }}</h3>
+        <button @click="closeRoleForm" class="text-gray-500 hover:text-gray-700">
+          <XIcon :size="24" />
+        </button>
+      </div>
+
+      <form @submit.prevent="handleRoleSubmit" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre (slug)</label>
+            <input
+              type="text"
+              v-model="roleFormData.name"
+              :disabled="editingRoleId"
+              class="w-full rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 border-gray-300 p-2"
+              placeholder="ej: auxilia"
+              required
+            />
+            <p v-if="roleFormErrors.name" class="mt-1 text-sm text-red-600">{{ roleFormErrors.name }}</p>
+            <p class="text-xs text-gray-500 mt-1">Sólo letras minúsculas, números, guiones bajos o guiones.</p>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Permisos</label>
+            <div class="space-y-4 max-h-60 overflow-y-auto p-2 border border-gray-100 rounded-lg">
+              <div v-for="group in permissionGroups" :key="group.key" class="">
+                <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1 mb-2">{{ group.title }}</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <label v-for="p in group.items" :key="p.name" class="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      :value="p.name"
+                      :checked="roleFormData.permissions.includes(p.name)"
+                      :disabled="p.name === 'create_result' && !hasAnyViewSelected"
+                      :title="p.name === 'create_result' && !hasAnyViewSelected ? 'Para habilitar crear, seleccione primero un permiso de ver resultados' : ''"
+                      @change="(e) => onPermissionToggle(p.name, e.target.checked)"
+                    />
+                    <span :class="['text-sm', (p.name === 'create_result' && !hasAnyViewSelected) ? 'text-gray-400' : 'text-gray-700']">{{ p.label || p.name }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <p v-if="roleFormErrors.permissions" class="mt-1 text-sm text-red-600">{{ roleFormErrors.permissions }}</p>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" @click="closeRoleForm" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{{ editingRoleId ? 'Actualizar' : 'Crear' }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal de formulario de departamento -->
   <div v-if="showDepartmentForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-xl p-6 max-w-md w-full">
@@ -591,6 +719,9 @@
       </form>
     </div>
   </div>
+  <!-- (El modal duplicado showRoleForm fue eliminado; se usa `showForm` para roles) -->
+
+  
 
   <!-- Modal de confirmación Habilitar/Deshabilitar usuario -->
   <div
@@ -740,6 +871,9 @@ watch(
   }
 )
 
+// Mantener sincronizados los roles con las props de Inertia tras reloads parciales
+// (se reubica el watch más abajo, después de inicializar `page`)
+
 // Búsquedas
 const userSearchQuery = ref('')
 const roleFilter = ref('')
@@ -766,6 +900,9 @@ const userToToggle = ref(null)
 // Estado para confirmación de eliminación de departamento
 const showDepartmentDeleteModal = ref(false)
 const departmentToDelete = ref(null)
+// Confirmación de eliminación de rol
+const showRoleDeleteModal = ref(false)
+const roleToDelete = ref(null)
 
 // Usuario autenticado (para evitar auto-deshabilitar)
 const page = usePage()
@@ -790,13 +927,232 @@ const departmentFormData = ref({
   head_user_id: ''
 })
 
-// Roles del sistema (Spatie) según seeder, etiquetados en español
-const roles = ref([
+// Roles del sistema (vienen desde el servidor vía Inertia)
+const pageProps = page?.props || {}
+const roles = ref(pageProps.initialRoles || [
   { id: 'admin', label: 'Administrador' },
   { id: 'directive', label: 'Directivo' },
   { id: 'head_dp', label: 'Jefe de Departamento' },
   { id: 'profesor', label: 'Profesor' },
 ])
+
+// Permisos disponibles (desde servidor)
+const permissions = ref(pageProps.initialPermissions || [])
+
+// Mostrar únicamente permisos necesarios (ocultar los reservados/no asignados por ahora)
+const filteredPermissions = computed(() => {
+  // Mostrar todos los permisos definidos desde backend
+  return permissions.value || []
+})
+
+// Sincronizar roles con las props de Inertia cuando se actualicen (colocado tras inicializar `page`)
+watch(
+  () => page?.props?.initialRoles,
+  (val) => {
+    if (Array.isArray(val)) {
+      roles.value = [...val]
+    }
+  }
+)
+
+// Agrupar permisos para la UI
+const permissionGroups = computed(() => {
+  // Definición por grupos lógicos (oculta permisos granulares de administración y deja solo admin_system)
+  const defs = [
+    { key: 'view', title: 'Resultados — Ver', names: ['view_all_results', 'view_department_results', 'view_own_results'] },
+    { key: 'edit', title: 'Resultados — Crear/Editar', names: ['create_result', 'edit_any_result', 'edit_department_result', 'edit_own_result'] },
+    { key: 'delete', title: 'Resultados — Eliminar', names: ['delete_any_result', 'delete_department_result', 'delete_own_result'] },
+    { key: 'admin', title: 'Administración del sistema', names: ['admin_system'] },
+  ]
+
+  const byName = new Map((filteredPermissions.value || []).map(p => [p.name, p]))
+  return defs.map(d => ({
+    key: d.key,
+    title: d.title,
+    items: d.names
+      .map(n => {
+        const it = byName.get(n)
+        if (!it) return null
+        if (n === 'admin_system') {
+          return { ...it, label: 'Administrar Sistema' }
+        }
+        return it
+      })
+      .filter(Boolean)
+  })).filter(g => g.items.length)
+})
+
+// Estado del formulario de rol
+const showForm = ref(false)
+const editingRoleId = ref(null)
+const roleFormData = ref({ name: '', permissions: [] })
+const roleFormErrors = ref({})
+const roleSaveSucceeded = ref(false)
+
+// Grupos de permisos mutuamente excluyentes
+const exclusivePermissionGroups = [
+  ['view_all_results', 'view_department_results', 'view_own_results'],
+  ['edit_any_result', 'edit_department_result', 'edit_own_result'],
+  ['delete_any_result', 'delete_department_result', 'delete_own_result']
+]
+
+const exclusiveMap = (() => {
+  const map = new Map()
+  exclusivePermissionGroups.forEach(group => {
+    group.forEach(name => {
+      map.set(name, new Set(group.filter(n => n !== name)))
+    })
+  })
+  return map
+})()
+
+const viewPermissions = ['view_all_results', 'view_department_results', 'view_own_results']
+const hasAnyViewSelected = computed(() => viewPermissions.some(n => (roleFormData.value.permissions || []).includes(n)))
+
+const onPermissionToggle = (name, checked) => {
+  const current = new Set(roleFormData.value.permissions || [])
+  if (checked) {
+    // Regla: no permitir create_result si no hay permisos de ver
+    if (name === 'create_result' && !hasAnyViewSelected.value) {
+      // Ignorar selección; se refleja por el disabled en UI, pero por seguridad también aquí
+      return
+    }
+    // Agregar seleccionado
+    current.add(name)
+    // Remover los conflictivos del mismo grupo
+    const conflicts = exclusiveMap.get(name)
+    if (conflicts) {
+      conflicts.forEach(c => current.delete(c))
+    }
+    // Si se selecciona un permiso de ver, no hacer nada extra
+  } else {
+    current.delete(name)
+  }
+  // Si después del cambio no queda ningún permiso de ver, forzar quitar create_result
+  const anyView = viewPermissions.some(v => current.has(v))
+  if (!anyView && current.has('create_result')) {
+    current.delete('create_result')
+  }
+  roleFormData.value.permissions = Array.from(current)
+}
+
+const openRoleForm = () => {
+  editingRoleId.value = null
+  roleFormData.value = { name: '', permissions: [] }
+  showForm.value = true
+}
+
+const editRole = (role) => {
+  editingRoleId.value = role.id
+  roleFormData.value = { name: role.id, permissions: Array.from(role.permissions || []) }
+  showForm.value = true
+}
+
+const closeRoleForm = () => {
+  showForm.value = false
+  editingRoleId.value = null
+  roleFormData.value = { name: '', permissions: [] }
+  roleFormErrors.value = {}
+}
+
+// Helper: generar etiqueta legible desde el slug del rol
+const makeRoleLabelFromName = (name) => {
+  if (!name) return 'Rol'
+  return String(name)
+    .split('_')
+    .map(s => s.charAt(0).toUpperCase() + s.slice(1))
+    .join(' ')
+}
+
+const handleRoleSubmit = () => {
+  const payload = { permissions: roleFormData.value.permissions }
+  if (!editingRoleId.value) {
+    // Crear rol: enviar name y permissions
+    payload.name = roleFormData.value.name
+    roleSaveSucceeded.value = false
+    router.post('/admin/roles', payload, {
+      preserveState: true,
+      preserveScroll: true,
+      onSuccess: () => {
+        roleSaveSucceeded.value = true
+        // Insertar localmente para reflejar inmediatamente en la UI
+        const newRole = {
+          id: roleFormData.value.name,
+          label: makeRoleLabelFromName(roleFormData.value.name),
+          description: '',
+          users_count: 0,
+          permissions: Array.isArray(roleFormData.value.permissions) ? [...roleFormData.value.permissions] : [],
+        }
+        roles.value = [newRole, ...roles.value.filter(r => r.id !== newRole.id)]
+        closeRoleForm()
+      },
+      onError: (errors) => {
+        // Inertia provide errors in errors.response?.data?.errors sometimes; map generically
+        roleFormErrors.value = errors || {}
+        if (errors && typeof errors === 'object') {
+          const first = Object.keys(errors)[0]
+          if (first) alert(String(errors[first]))
+        }
+      },
+      onFinish: () => {
+        // Si por algún motivo el onSuccess no cerró, ciérralo cuando hubo éxito
+        if (roleSaveSucceeded.value) {
+          closeRoleForm()
+        }
+      }
+    })
+  } else {
+    // Actualizar permisos del rol
+    roleSaveSucceeded.value = false
+    router.put(`/admin/roles/${editingRoleId.value}`, payload, {
+      onSuccess: () => {
+        roleSaveSucceeded.value = true
+        const idx = roles.value.findIndex(r => String(r.id) === String(editingRoleId.value))
+        if (idx !== -1) {
+          roles.value[idx] = {
+            ...roles.value[idx],
+            permissions: Array.isArray(roleFormData.value.permissions) ? [...roleFormData.value.permissions] : [],
+          }
+        }
+        closeRoleForm()
+      },
+      onError: (errors) => {
+        roleFormErrors.value = errors || {}
+        if (errors && typeof errors === 'object') {
+          const first = Object.keys(errors)[0]
+          if (first) alert(String(errors[first]))
+        }
+      },
+      onFinish: () => {
+        if (roleSaveSucceeded.value) {
+          closeRoleForm()
+        }
+      }
+    })
+  }
+}
+
+const confirmDeleteRole = (role) => {
+  roleToDelete.value = role
+  showRoleDeleteModal.value = true
+}
+
+const closeRoleDeleteModal = () => {
+  showRoleDeleteModal.value = false
+  roleToDelete.value = null
+}
+
+const confirmRoleDelete = () => {
+  if (!roleToDelete.value) return
+  const role = roleToDelete.value
+  router.delete(`/admin/roles/${role.id}`, {
+    onSuccess: () => {
+      roles.value = roles.value.filter(r => String(r.id) !== String(role.id))
+      closeRoleDeleteModal()
+    },
+    onError: () => alert('No se pudo eliminar el rol.')
+  })
+}
 
 // Roles disponibles en el formulario de usuario
 // En creación NO permitir seleccionar 'Jefe de Departamento'
@@ -877,6 +1233,11 @@ const getRoleLabel = (role) => {
 
 const getRoleIconClass = (role) => {
   return role === 'admin' ? 'text-purple-600' : 'text-gray-600'
+}
+
+const getPermissionLabel = (name) => {
+  const p = (permissions.value || []).find(x => x.name === name)
+  return p ? (p.label || p.name) : name
 }
 
 // Normaliza el campo CI: solo dígitos y máximo 11
@@ -1068,6 +1429,7 @@ const openDepartmentForm = () => {
   }
   showDepartmentForm.value = true
 }
+
 
 const editDepartment = (department) => {
   editingDepartmentId.value = department.id

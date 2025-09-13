@@ -20,9 +20,18 @@ class AwardController extends Controller
         $user = $request->user();
         $query = Award::with('users:id,name');
 
-        if ($user->can('view_all_results')) {
+        // Alcance de visibilidad: combinar permisos de ver/editar/eliminar
+        if (
+            $user->can('view_all_results') ||
+            $user->can('edit_any_result') ||
+            $user->can('delete_any_result')
+        ) {
             // Sin restricción: ver todos los premios
-        } elseif ($user->can('view_department_results')) {
+        } elseif (
+            $user->can('view_department_results') ||
+            $user->can('edit_department_result') ||
+            $user->can('delete_department_result')
+        ) {
             // Ver premios donde algún autor pertenezca al mismo departamento del usuario
             $deptId = $user->department_id ?? optional($user->department)->id;
             if ($deptId) {
@@ -149,7 +158,7 @@ class AwardController extends Controller
         $allowed = false;
         if ($user->can('edit_any_result')) {
             $allowed = true;
-        } elseif ($user->can('edit_department_results')) {
+        } elseif ($user->can('edit_department_result')) {
             $deptId = $user->department_id ?? optional($user->department)->id;
             $allowed = $deptId && $award->users->contains(fn($u) => (int)($u->department_id) === (int)$deptId);
         } elseif ($user->can('edit_own_result')) {
@@ -178,7 +187,7 @@ class AwardController extends Controller
     protected function canEditAward(User $user, Award $award): bool
     {
         if ($user->can('edit_any_result')) return true;
-        if ($user->can('edit_department_results')) {
+        if ($user->can('edit_department_result')) {
             $deptId = $user->department_id ?? optional($user->department)->id;
             if ($deptId) {
                 // Cargar relación users si no está cargada
@@ -198,27 +207,48 @@ class AwardController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified resource from storage with authorization rules:
+     * - delete_any_result: delete fully.
+     * - delete_department_result: delete if any author is from same department.
+     * - delete_own_result: if multiple authors, detach current user; if sole author, delete.
      */
     public function destroy(string $id)
     {
         $user = request()->user();
 
-        // Buscar premio asociado al usuario autenticado
-        $award = Award::whereKey($id)
-            ->whereHas('users', function ($q) use ($user) {
-                $q->where('users.id', $user->id);
-            })
-            ->withCount('users')
-            ->firstOrFail();
+        $award = Award::with('users:id,department_id')
+            ->findOrFail($id);
 
-        if ($award->users_count > 1) {
-            // Si hay otros usuarios asociados, solo desasociar al actual
-            $user->awards()->detach($award->id);
-        } else {
-            // Si solo está asociado al actual, eliminar el premio
-            $award->delete();
+        $canAny = $user->can('delete_any_result');
+        $canDept = $user->can('delete_department_result');
+        $canOwn = $user->can('delete_own_result');
+
+        $allowed = false;
+        $mode = 'none';
+
+        if ($canAny) {
+            $allowed = true; $mode = 'any';
+        } elseif ($canDept) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            if ($deptId) {
+                $allowed = $award->users->contains(fn($u) => (int)$u->department_id === (int)$deptId);
+            }
+            if ($allowed) $mode = 'dept';
+        } elseif ($canOwn) {
+            $allowed = $award->users->contains('id', $user->id);
+            if ($allowed) $mode = 'own';
         }
+
+        abort_unless($allowed, 403);
+
+        if ($mode === 'own' && $award->users()->count() > 1) {
+            $user->awards()->detach($award->id);
+            return redirect()->route('awards')->with('success', 'Se retiró tu autoría del premio.');
+        }
+
+        // Delete fully
+        $award->users()->detach();
+        $award->delete();
 
         return redirect()
             ->route('awards')

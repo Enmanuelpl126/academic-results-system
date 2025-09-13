@@ -3,13 +3,13 @@
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Encabezado con título y botón de agregar -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Events</h2>
+      <h2 class="text-2xl font-bold text-gray-900">Eventos</h2>
       <button
         @click="openCreateForm"
         class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
       >
         <PlusIcon :size="20" />
-        Add Event
+        Agregar Evento
       </button>
     </div>
 
@@ -376,7 +376,12 @@ const currentUserName = page?.props?.auth?.user?.name ?? null
 // Permisos
 const canDelete = computed(() => {
   const perms = page?.props?.auth?.permissions || []
-  return Array.isArray(perms) && perms.includes('delete_any_result')
+  if (!Array.isArray(perms)) return false
+  return (
+    perms.includes('delete_any_result') ||
+    perms.includes('delete_department_result') ||
+    perms.includes('delete_own_result')
+  )
 })
 
 // ========== Autocomplete de usuarios ==========

@@ -2,8 +2,9 @@
 import UserInfo from '@/components/UserInfo.vue';
 import { DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import type { User } from '@/types';
-import { Link, router } from '@inertiajs/vue3';
-import { LogOut, Settings } from 'lucide-vue-next';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import { LogOut, Settings, Users } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 interface Props {
     user: User;
@@ -12,6 +13,14 @@ interface Props {
 const handleLogout = () => {
     router.flushAll();
 };
+
+const page = usePage();
+const canAdmin = computed(() => {
+    const auth = (page?.props as any)?.auth || {};
+    if (auth?.can_admin === true) return true;
+    const perms = auth?.permissions || [];
+    return Array.isArray(perms) && perms.includes('admin_system');
+});
 
 defineProps<Props>();
 </script>
@@ -28,6 +37,12 @@ defineProps<Props>();
             <Link class="block w-full" :href="route('profile.edit')" prefetch as="button">
                 <Settings class="mr-2 h-4 w-4" />
                 Settings
+            </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem v-if="canAdmin" :as-child="true">
+            <Link class="block w-full" :href="route('admin.index')" prefetch as="button">
+                <Users class="mr-2 h-4 w-4" />
+                Administración
             </Link>
         </DropdownMenuItem>
     </DropdownMenuGroup>

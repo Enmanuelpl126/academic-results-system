@@ -25,9 +25,18 @@ class PublicationController extends Controller
 
         $query = Publication::with(['users:id,name', 'magazine', 'book', 'chapter']);
 
-        if ($user->can('view_all_results')) {
+        // Alcance de visibilidad: combinar permisos de ver/editar/eliminar
+        if (
+            $user->can('view_all_results') ||
+            $user->can('edit_any_result') ||
+            $user->can('delete_any_result')
+        ) {
             // sin restricciones
-        } elseif ($user->can('view_department_results')) {
+        } elseif (
+            $user->can('view_department_results') ||
+            $user->can('edit_department_result') ||
+            $user->can('delete_department_result')
+        ) {
             $deptId = $user->department_id ?? optional($user->department)->id;
             if ($deptId) {
                 $query->whereHas('users', function ($q) use ($deptId) {
@@ -231,7 +240,7 @@ class PublicationController extends Controller
         $allowed = false;
         if ($user->can('edit_any_result')) {
             $allowed = true;
-        } elseif ($user->can('edit_department_results')) {
+        } elseif ($user->can('edit_department_result')) {
             $deptId = $user->department_id ?? optional($user->department)->id;
             $allowed = $deptId && $publication->users->contains(fn($u) => (int)$u->department_id === (int)$deptId);
         } elseif ($user->can('edit_own_result')) {
@@ -306,7 +315,7 @@ class PublicationController extends Controller
     protected function canEditPublication(User $user, Publication $publication): bool
     {
         if ($user->can('edit_any_result')) return true;
-        if ($user->can('edit_department_results')) {
+        if ($user->can('edit_department_result')) {
             $deptId = $user->department_id ?? optional($user->department)->id;
             if ($deptId) {
                 $publication->loadMissing('users:id,department_id');
@@ -321,12 +330,47 @@ class PublicationController extends Controller
     }
 
     /**
-     * Elimina una publicación y sus registros relacionados.
+     * Elimina una publicación y sus registros relacionados con reglas de autorización:
+     * - delete_any_result: elimina completamente.
+     * - delete_department_result: elimina si algún autor pertenece al mismo departamento.
+     * - delete_own_result: si hay varios autores, desasocia al usuario actual; si es el único autor, elimina.
      */
     public function destroy(Publication $publication)
     {
+        $user = request()->user();
+        $publication->loadMissing('users:id,department_id');
+
+        $canAny = $user->can('delete_any_result');
+        $canDept = $user->can('delete_department_result');
+        $canOwn = $user->can('delete_own_result');
+
+        $allowed = false;
+        $deleteMode = 'none'; // any|dept|own|none
+
+        if ($canAny) {
+            $allowed = true;
+            $deleteMode = 'any';
+        } elseif ($canDept) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            if ($deptId) {
+                $allowed = $publication->users->contains(fn($u) => (int)$u->department_id === (int)$deptId);
+            }
+            if ($allowed) $deleteMode = 'dept';
+        } elseif ($canOwn) {
+            $allowed = $publication->users->contains('id', $user->id);
+            if ($allowed) $deleteMode = 'own';
+        }
+
+        abort_unless($allowed, 403);
+
+        if ($deleteMode === 'own' && $publication->users()->count() > 1) {
+            // Solo eliminar la relación del usuario actual
+            $publication->users()->detach($user->id);
+            return redirect()->route('publications')->with('success', 'Se retiró tu autoría de la publicación.');
+        }
+
+        // Eliminar completamente (any/dept o own siendo único autor)
         DB::transaction(function () use ($publication) {
-            // Eliminar relaciones por tipo si existen
             if ($publication->magazine) {
                 $publication->magazine()->delete();
             }
@@ -336,11 +380,7 @@ class PublicationController extends Controller
             if ($publication->chapter) {
                 $publication->chapter()->delete();
             }
-
-            // Desasociar autores (pivot)
             $publication->users()->detach();
-
-            // Eliminar publicación
             $publication->delete();
         });
 

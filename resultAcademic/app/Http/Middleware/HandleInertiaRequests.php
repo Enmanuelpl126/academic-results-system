@@ -46,9 +46,10 @@ class HandleInertiaRequests extends Middleware
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
                 'user' => $user,
-                // Exponer roles y permisos para la UI
-                'roles' => $user ? $user->getRoleNames() : [],
-                'permissions' => $user ? $user->getAllPermissions()->pluck('name') : [],
+                // Exponer roles y permisos como arreglos simples para la UI
+                'roles' => $user ? $user->getRoleNames()->values()->all() : [],
+                'permissions' => $user ? $user->getAllPermissions()->pluck('name')->values()->all() : [],
+                'can_admin' => $user ? $user->can('admin_system') : false,
             ],
             'ziggy' => [
                 ...(new Ziggy)->toArray(),

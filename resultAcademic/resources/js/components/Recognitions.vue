@@ -3,13 +3,14 @@
   <div class="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-8">
     <!-- Encabezado con título y botón de agregar -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-      <h2 class="text-2xl font-bold text-gray-900">Recognitions & Honors</h2>
+      <h2 class="text-2xl font-bold text-gray-900">Reconocimientos</h2>
       <button
+        v-if="canCreate"
         @click="openCreateForm"
         class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
       >
         <PlusIcon :size="20" />
-        Add Recognition
+        Agregar Reconocimiento
       </button>
     </div>
 
@@ -359,7 +360,17 @@ const currentUserName = page?.props?.auth?.user?.name ?? null
 // Permisos
 const canDelete = computed(() => {
   const perms = page?.props?.auth?.permissions || []
-  return Array.isArray(perms) && perms.includes('delete_any_result')
+  if (!Array.isArray(perms)) return false
+  return (
+    perms.includes('delete_any_result') ||
+    perms.includes('delete_department_result') ||
+    perms.includes('delete_own_result')
+  )
+})
+
+const canCreate = computed(() => {
+  const perms = page?.props?.auth?.permissions || []
+  return Array.isArray(perms) && perms.includes('create_result')
 })
 
 // Datos del formulario

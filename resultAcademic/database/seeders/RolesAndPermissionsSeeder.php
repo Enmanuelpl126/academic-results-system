@@ -39,6 +39,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_all_departments',
             // Configuración
             'manage_roles_permissions',
+            // Permiso agregado: administración del sistema (agrega/encapsula gestión de usuarios, departamentos y roles)
+            'admin_system',
         ];
 
         foreach ($permissions as $name) {
@@ -65,6 +67,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'delete_department',
             'view_all_departments',
             'manage_roles_permissions',
+            'admin_system',
         ]);
 
         $directive->syncPermissions([

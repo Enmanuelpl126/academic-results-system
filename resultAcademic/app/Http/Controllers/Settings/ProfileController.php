@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\Department;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,10 +19,45 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
-        return Inertia::render('settings/Profile', [
+        $user = $request->user();
+
+        // Contadores: publicaciones, premios, reconocimientos y eventos asociados
+        $counters = [
+            'publications_count' => $user->publications()->count(),
+            'awards_count' => $user->awards()->count(),
+            'recognitions_count' => $user->recognitions()->count(),
+            'events_count' => $user->events()->count(),
+        ];
+
+        $departments = Department::query()->select('id', 'name')->orderBy('name')->get();
+
+        return Inertia::render('settings/Profile', array_merge([
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
-        ]);
+            'departments' => $departments,
+        ], $counters));
+    }
+
+    /**
+     * Show public profile page (no navbar) for authenticated user.
+     */
+    public function show(Request $request): Response
+    {
+        $user = $request->user();
+
+        $counters = [
+            'publications_count' => $user->publications()->count(),
+            'awards_count' => $user->awards()->count(),
+            'recognitions_count' => $user->recognitions()->count(),
+            'events_count' => $user->events()->count(),
+        ];
+
+        $departments = Department::query()->select('id', 'name')->orderBy('name')->get();
+
+        return Inertia::render('ProfileView', array_merge([
+            'user' => $user,
+            'departments' => $departments,
+        ], $counters));
     }
 
     /**

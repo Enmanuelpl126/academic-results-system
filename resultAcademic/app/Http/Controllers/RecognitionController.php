@@ -19,9 +19,18 @@ class RecognitionController extends Controller
         $user = $request->user();
         $query = Recognition::with('users:id,name');
 
-        if ($user->can('view_all_results')) {
+        // Alcance de visibilidad: combinar permisos de ver/editar/eliminar
+        if (
+            $user->can('view_all_results') ||
+            $user->can('edit_any_result') ||
+            $user->can('delete_any_result')
+        ) {
             // sin restricciones
-        } elseif ($user->can('view_department_results')) {
+        } elseif (
+            $user->can('view_department_results') ||
+            $user->can('edit_department_result') ||
+            $user->can('delete_department_result')
+        ) {
             $deptId = $user->department_id ?? optional($user->department)->id;
             if ($deptId) {
                 $query->whereHas('users', function ($q) use ($deptId) {
@@ -124,7 +133,7 @@ class RecognitionController extends Controller
         $allowed = false;
         if ($user->can('edit_any_result')) {
             $allowed = true;
-        } elseif ($user->can('edit_department_results')) {
+        } elseif ($user->can('edit_department_result')) {
             $deptId = $user->department_id ?? optional($user->department)->id;
             $allowed = $deptId && $recognition->users->contains(fn($u) => (int)$u->department_id === (int)$deptId);
         } elseif ($user->can('edit_own_result')) {
@@ -155,7 +164,7 @@ class RecognitionController extends Controller
     protected function canEditRecognition(User $user, Recognition $recognition): bool
     {
         if ($user->can('edit_any_result')) return true;
-        if ($user->can('edit_department_results')) {
+        if ($user->can('edit_department_result')) {
             $deptId = $user->department_id ?? optional($user->department)->id;
             if ($deptId) {
                 $recognition->loadMissing('users:id,department_id');
@@ -170,27 +179,48 @@ class RecognitionController extends Controller
     }
 
     /**
-     * Elimina el reconocimiento si solo está asociado al usuario autenticado;
-     * de lo contrario, desasocia al usuario actual del reconocimiento.
+     * Eliminar reconocimiento con reglas:
+     * - delete_any_result: elimina completamente.
+     * - delete_department_result: elimina si algún autor pertenece al mismo departamento.
+     * - delete_own_result: si hay múltiples autores, desasocia al usuario; si es único autor, elimina.
      */
     public function destroy(Request $request, string $id)
     {
         $user = $request->user();
 
-        $recognition = Recognition::whereKey($id)
-            ->whereHas('users', function ($q) use ($user) {
-                $q->where('users.id', $user->id);
-            })
-            ->withCount('users')
-            ->firstOrFail();
+        $recognition = Recognition::with('users:id,department_id')
+            ->findOrFail($id);
 
-        if ($recognition->users_count > 1) {
-            // Hay otros usuarios asociados: desasociar al actual
-            $user->recognitions()->detach($recognition->id);
-        } else {
-            // Solo el usuario actual está asociado: eliminar el reconocimiento
-            $recognition->delete();
+        $canAny = $user->can('delete_any_result');
+        $canDept = $user->can('delete_department_result');
+        $canOwn = $user->can('delete_own_result');
+
+        $allowed = false;
+        $mode = 'none';
+
+        if ($canAny) {
+            $allowed = true; $mode = 'any';
+        } elseif ($canDept) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            if ($deptId) {
+                $allowed = $recognition->users->contains(fn($u) => (int)$u->department_id === (int)$deptId);
+            }
+            if ($allowed) $mode = 'dept';
+        } elseif ($canOwn) {
+            $allowed = $recognition->users->contains('id', $user->id);
+            if ($allowed) $mode = 'own';
         }
+
+        abort_unless($allowed, 403);
+
+        if ($mode === 'own' && $recognition->users()->count() > 1) {
+            $user->recognitions()->detach($recognition->id);
+            return redirect()->route('recognitions')->with('success', 'Se retiró tu autoría del reconocimiento.');
+        }
+
+        // Eliminar completamente
+        $recognition->users()->detach();
+        $recognition->delete();
 
         return redirect()
             ->route('recognitions')

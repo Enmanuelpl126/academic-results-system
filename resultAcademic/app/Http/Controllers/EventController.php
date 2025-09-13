@@ -166,19 +166,44 @@ class EventController extends Controller
     }
 
     /**
-     * Elimina un evento existente.
+     * Elimina un evento con reglas de autorización:
+     * - delete_any_result: eliminar totalmente.
+     * - delete_department_result: eliminar si hay algún autor del mismo departamento.
+     * - delete_own_result: si hay múltiples autores, desasocia al usuario; si es único autor, elimina.
      */
     public function destroy(Event $event)
     {
-        // Opcional: validar que el usuario autenticado esté asociado al evento
-        // $this->authorize('delete', $event);
+        $user = request()->user();
+        $event->loadMissing('users:id,department_id');
 
-        // Eliminar relaciones y el propio evento
+        $canAny = $user->can('delete_any_result');
+        $canDept = $user->can('delete_department_result');
+        $canOwn = $user->can('delete_own_result');
+
+        $allowed = false; $mode = 'none';
+        if ($canAny) {
+            $allowed = true; $mode = 'any';
+        } elseif ($canDept) {
+            $deptId = $user->department_id ?? optional($user->department)->id;
+            if ($deptId) {
+                $allowed = $event->users->contains(fn($u) => (int)$u->department_id === (int)$deptId);
+            }
+            if ($allowed) $mode = 'dept';
+        } elseif ($canOwn) {
+            $allowed = $event->users->contains('id', $user->id);
+            if ($allowed) $mode = 'own';
+        }
+
+        abort_unless($allowed, 403);
+
+        if ($mode === 'own' && $event->users()->count() > 1) {
+            $user->events()->detach($event->id);
+            return redirect()->route('events')->with('success', 'Se retiró tu autoría del evento.');
+        }
+
         $event->users()->detach();
         $event->delete();
 
-        return redirect()
-            ->route('events')
-            ->with('success', 'Evento eliminado correctamente.');
+        return redirect()->route('events')->with('success', 'Evento eliminado correctamente.');
     }
 }

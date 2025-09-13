@@ -38,7 +38,7 @@
             >
               <button
                 class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                @click="() => { handleSectionChange('profile'); isUserMenuOpen = false }"
+                @click="() => { router.visit('/profile'); isUserMenuOpen = false }"
                 role="menuitem"
               >
                 <UserCircleIcon :size="18" />
@@ -99,7 +99,7 @@
             >
               <button
                 class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                @click="() => { handleSectionChange('profile'); isUserMenuOpenMobile = false }"
+                @click="() => { router.visit('/profile'); isUserMenuOpenMobile = false }"
                 role="menuitem"
               >
                 <UserCircleIcon :size="18" />

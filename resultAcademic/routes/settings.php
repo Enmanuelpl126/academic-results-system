@@ -11,6 +11,8 @@ Route::middleware('auth')->group(function () {
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // public profile page for the authenticated user (no navbar)
+    Route::get('profile', [ProfileController::class, 'show'])->name('profile.view');
 
     Route::get('settings/password', [PasswordController::class, 'edit'])->name('password.edit');
 
