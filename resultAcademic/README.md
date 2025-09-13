@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-=======
+
 # Resultados Académicos
 
 **Autor:** Enmanuel Piñero Linares 
