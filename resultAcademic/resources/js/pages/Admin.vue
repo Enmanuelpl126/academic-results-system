@@ -6,7 +6,7 @@
       <Button as-child>
         <Link :href="route('publications')" class="inline-flex items-center gap-2">
           <ArrowLeft class="h-4 w-4" />
-          <span>Volver a Publicaciones</span>
+          <span>Volver</span>
         </Link>
       </Button>
     </div>

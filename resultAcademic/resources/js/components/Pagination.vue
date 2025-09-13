@@ -12,13 +12,15 @@
               ? 'bg-blue-600 text-white border-blue-600'
               : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
           ]"
-          v-html="link.label"
-        />
+        >
+          {{ link.label }}
+        </button>
         <span
           v-else
           class="px-3 py-1.5 rounded-md text-sm border border-gray-200 text-gray-400"
-          v-html="link.label"
-        />
+        >
+          {{ link.label }}
+        </span>
       </li>
     </ul>
   </nav>
@@ -43,7 +45,11 @@ const go = (url) => {
 // Normaliza etiquetas a español y limpia HTML innecesario
 const normalizedLinks = computed(() => {
   const mapLabel = (raw) => {
-    const s = String(raw).replace(/&laquo;|&raquo;/g, '').trim()
+    // Remueve etiquetas HTML y entidades tipográficas comunes
+    const s = String(raw)
+      .replace(/&laquo;|&raquo;/g, '')
+      .replace(/<[^>]*>/g, '')
+      .trim()
     if (/previous|anterior/i.test(s)) return 'Anterior'
     if (/next|siguiente/i.test(s)) return 'Siguiente'
     return s

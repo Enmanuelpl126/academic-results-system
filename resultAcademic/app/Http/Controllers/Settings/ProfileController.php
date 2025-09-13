@@ -73,7 +73,8 @@ class ProfileController extends Controller
 
         $request->user()->save();
 
-        return to_route('profile.edit');
+        // Volver a la página anterior (por ejemplo, la vista pública del perfil) en lugar de forzar ir a settings/profile
+        return back()->with('status', 'profile-updated');
     }
 
     /**

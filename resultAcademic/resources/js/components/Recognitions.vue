@@ -212,7 +212,7 @@
               @click="closeForm"
               class="w-full sm:w-auto px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               type="submit"
@@ -222,7 +222,7 @@
                 form.processing ? 'bg-blue-400 cursor-not-allowed text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'
               ]"
             >
-              {{ editingId ? 'Update Recognition' : 'Save Recognition' }}
+              {{ editingId ? 'Actualizar Reconocimiento' : 'Guardar Reconocimiento' }}
             </button>
           </div>
         </form>

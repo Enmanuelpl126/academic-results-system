@@ -63,6 +63,7 @@ const roleBadgeClass = computed(() => {
 
 const form = reactive({
   name: props.user?.name || '',
+  email: (props.user as any)?.email || '',
   ci: (props.user as any)?.ci || '',
   department_id: (props.user as any)?.department_id || (props.user?.department as any)?.id || '',
   teaching_category: (props.user as any)?.teaching_category || '',
@@ -72,6 +73,7 @@ const form = reactive({
 
 const errors = reactive<{ [k: string]: string | null }>({
   name: null,
+  email: null,
   ci: null,
   professional_level: null
 })
@@ -82,6 +84,7 @@ watch(
   (serverErrors: any) => {
     if (!serverErrors) return
     errors.name = serverErrors.name || null
+    errors.email = serverErrors.email || null
     errors.ci = serverErrors.ci || null
     errors.professional_level = serverErrors.professional_level || null
   }
@@ -96,6 +99,7 @@ function startEdit() {
 function cancelEdit() {
   // Restaurar valores originales
   form.name = props.user?.name || ''
+  form.email = (props.user as any)?.email || ''
   form.ci = (props.user as any)?.ci || ''
   form.department_id = (props.user as any)?.department_id || (props.user?.department as any)?.id || ''
   form.teaching_category = (props.user as any)?.teaching_category || ''
@@ -109,17 +113,19 @@ function cancelEdit() {
 async function save() {
   // Validación mínima
   errors.name = !form.name ? 'El nombre es requerido' : null
+  // email requerido por el backend, aunque sea de solo lectura aquí
+  errors.email = !form.email ? 'El email es requerido' : null
   // CI opcional pero si viene, 11 dígitos
   errors.ci = form.ci && !/^[0-9]{11}$/.test(form.ci) ? 'El CI debe contener 11 dígitos' : null
   errors.professional_level = !form.professional_level ? 'Seleccione el nivel profesional' : null
-  if (errors.name || errors.ci || errors.professional_level) return
+  if (errors.name || errors.email || errors.ci || errors.professional_level) return
 
   isSaving.value = true
   try {
     emit('save', {
       name: form.name,
+      email: form.email,
       ci: form.ci || null,
-      department_id: form.department_id || null,
       teaching_category: form.teaching_category || null,
       scientific_category: form.scientific_category || null,
       professional_level: form.professional_level
@@ -187,18 +193,10 @@ async function save() {
             <div class="text-gray-900 truncate">{{ props.user?.email || '—' }}</div>
           </div>
 
-          <!-- Departamento -->
+          <!-- Departamento (solo lectura desde el perfil) -->
           <div>
             <label class="block text-sm text-gray-700 mb-1">Departamento</label>
-            <template v-if="isEditing">
-              <select v-model="form.department_id" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                <option value="">Sin departamento</option>
-                <option v-for="dept in departmentsList" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
-              </select>
-            </template>
-            <template v-else>
-              <div class="text-gray-900">{{ props.user?.department?.name || 'Sin departamento' }}</div>
-            </template>
+            <div class="text-gray-900">{{ props.user?.department?.name || 'Sin departamento' }}</div>
           </div>
 
           <!-- Categorías (solo lectura) -->

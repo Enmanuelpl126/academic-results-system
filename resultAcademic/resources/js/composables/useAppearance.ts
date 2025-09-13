@@ -24,7 +24,10 @@ const setCookie = (name: string, value: string, days = 365) => {
 
     const maxAge = days * 24 * 60 * 60;
 
-    document.cookie = `${name}=${value};path=/;max-age=${maxAge};SameSite=Lax`;
+    // Añade Secure en contexto HTTPS para reducir riesgos de exposición en tránsito.
+    const isSecure = typeof window !== 'undefined' && window.location && window.location.protocol === 'https:';
+    const secureAttr = isSecure ? ';Secure' : '';
+    document.cookie = `${name}=${value};path=/;max-age=${maxAge};SameSite=Lax${secureAttr}`;
 };
 
 const mediaQuery = () => {

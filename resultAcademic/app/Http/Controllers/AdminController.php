@@ -253,7 +253,10 @@ class AdminController extends Controller
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        Department::create($validated);
+        Department::create([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+        ]);
 
         return redirect()->route('admin.index')->with('success', 'Departamento creado correctamente.');
     }
@@ -267,7 +270,10 @@ class AdminController extends Controller
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $department->update($validated);
+        $department->update([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+        ]);
 
         return redirect()->route('admin.index')->with('success', 'Departamento actualizado correctamente.');
     }
