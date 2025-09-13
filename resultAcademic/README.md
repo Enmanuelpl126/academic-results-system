@@ -128,6 +128,3 @@ npm run dev
 npm run build
 ```
 
-
-
->>>>>>> f9a33ec746b192ed378b6f8fbf3539eb09bebfa5
