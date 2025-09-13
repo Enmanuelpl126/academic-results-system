@@ -1,10 +1,7 @@
 # Resultados Académicos
 
-**Autor:** Enmanuel Piñero Linares 
-**Contacto:** pinerolinaresenmanuel@gmail.com
-**Año:** 2025
 
-Aplicación Laravel 11 con Inertia.js (Vue 3) para gestionar resultados académicos : publicaciones, eventos, premios y reconocimientos de el claustro de una institución educativa. Incluye control de acceso basado en roles y permisos con Spatie Permission, paginación , y UI moderna.
+Aplicación Laravel 11 con Inertia.js (Vue 3) para gestionar resultados académicos : publicaciones, eventos, premios y reconocimientos del claustro de una institución educativa. Incluye control de acceso basado en roles y permisos con Spatie Permission, paginación , y UI moderna.
 
 ## Tecnologías
 - Laravel 11
@@ -87,15 +84,7 @@ La app quedará disponible en `http://127.0.0.1:8000`.
 
 Ajusta estos permisos/roles según tus necesidades en `RolesAndPermissionsSeeder`.
 
-## Política de usuarios
-- Los usuarios no se eliminan; se marcan con `is_enabled`.
-- Usuarios deshabilitados no pueden iniciar sesión.
-- En la UI, los administradores no pueden deshabilitar su propia cuenta (para evitar lockout).
 
-## Paginación
-- El backend usa `paginate(10)`.
-- El frontend muestra controles en español usando `Pagination.vue`.
-- Se alinea a la derecha bajo tablas/listados.
 
 ## Desarrollo y mantenimiento
 - Actualiza permisos/roles modificando `RolesAndPermissionsSeeder` y ejecuta:
@@ -105,10 +94,7 @@ php artisan cache:clear && php artisan route:clear && php artisan config:clear
 ```
 - Si cambias middleware de Spatie en Laravel 11, recuerda registrar los alias en `bootstrap/app.php`.
 
-## Troubleshooting
-- "Missing middleware alias ...": verifica `bootstrap/app.php` y limpia cachés.
-- Cambios en permisos no se reflejan en UI: asegúrate de que `HandleInertiaRequests` comparte `auth.permissions` y limpia cachés.
-- Problemas con fechas: los componentes formatean sin zona horaria; valida formato `YYYY-MM-DD` en el backend.
+
 
 ## Scripts útiles
 ```
