@@ -94,10 +94,7 @@ php artisan cache:clear && php artisan route:clear && php artisan config:clear
 ```
 - Si cambias middleware de Spatie en Laravel 11, recuerda registrar los alias en `bootstrap/app.php`.
 
-## Troubleshooting
-- "Missing middleware alias ...": verifica `bootstrap/app.php` y limpia cachés.
-- Cambios en permisos no se reflejan en UI: asegúrate de que `HandleInertiaRequests` comparte `auth.permissions` y limpia cachés.
-- Problemas con fechas: los componentes formatean sin zona horaria; valida formato `YYYY-MM-DD` en el backend.
+
 
 ## Scripts útiles
 ```
