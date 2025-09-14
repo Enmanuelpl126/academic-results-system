@@ -39,17 +39,19 @@ const props = defineProps({
 
 const go = (url) => {
   if (!url) return
-  router.visit(url, { preserveScroll: true })
+  // Previene urls potencialmente peligrosas como "javascript:"
+  const u = String(url)
+  if (/^\s*javascript:/i.test(u)) return
+  router.visit(u, { preserveScroll: true })
 }
 
-// Normaliza etiquetas a español y limpia HTML innecesario
+// Normaliza etiquetas a español y limpia HTML usando un parser seguro
 const normalizedLinks = computed(() => {
   const mapLabel = (raw) => {
-    // Remueve etiquetas HTML y entidades tipográficas comunes
-    const s = String(raw)
-      .replace(/&laquo;|&raquo;/g, '')
-      .replace(/<[^>]*>/g, '')
-      .trim()
+    // Usa DOMParser para extraer texto plano y decodificar entidades de forma robusta
+    const input = String(raw ?? '')
+    const doc = new DOMParser().parseFromString(input, 'text/html')
+    const s = (doc.body.textContent || '').trim()
     if (/previous|anterior/i.test(s)) return 'Anterior'
     if (/next|siguiente/i.test(s)) return 'Siguiente'
     return s
