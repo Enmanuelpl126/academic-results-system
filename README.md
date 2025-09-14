@@ -228,7 +228,4 @@ chmod -R ug+rwx storage bootstrap/cache
   - Ejecuta `php artisan serve --host=127.0.0.1 --port=8001` o cierra el proceso que ocupa el puerto 8000.
 - `npm` no reconocido
   - Instala Node.js 18+ y reabre la terminal. En Windows, verifica que Node esté en el PATH.
-
-## Autor y créditos
-- Autor: Enmanuel (autor del proyecto). Gracias por su trabajo y liderazgo del código base.
-- Frameworks y paquetes: Laravel 11, Inertia.js, Vue 3, TailwindCSS, Spatie Laravel Permission.
+.
