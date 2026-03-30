@@ -129,6 +129,7 @@ class AdminController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'ci' => ['required', 'digits:11', 'unique:users,ci'],
+            'orci' => ['nullable', 'string', 'max:255'],
             'teaching_category' => ['nullable', 'string', Rule::in(['profesor_principal', 'profesor_ayudante', 'profesor_entrenador'])],
             'scientific_category' => ['nullable', 'string', Rule::in(['aspirante', 'investigador_agregado', 'investigador_titular'])],
             'professional_level' => ['required', 'string', Rule::in(['tecnico', 'especialista', 'obrero', 'licenciado', 'master', 'doctor_en_ciencias'])],
@@ -148,6 +149,7 @@ class AdminController extends Controller
         $user->password = Hash::make($validated['password']);
         $user->email_verified_at = now();
         $user->ci = $validated['ci'] ?? null;
+        $user->orci = $validated['orci'] ?? null;
         $user->teaching_category = $validated['teaching_category'] ?? null;
         $user->scientific_category = $validated['scientific_category'] ?? null;
         $user->professional_level = $validated['professional_level'] ?? null;
@@ -168,6 +170,7 @@ class AdminController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'ci' => ['required', 'digits:11', Rule::unique('users', 'ci')->ignore($user->id)],
+            'orci' => ['nullable', 'string', 'max:255'],
             'teaching_category' => ['nullable', 'string', Rule::in(['profesor_principal', 'profesor_ayudante', 'profesor_entrenador'])],
             'scientific_category' => ['nullable', 'string', Rule::in(['aspirante', 'investigador_agregado', 'investigador_titular'])],
             'professional_level' => ['required', 'string', Rule::in(['tecnico', 'especialista', 'obrero', 'licenciado', 'master', 'doctor_en_ciencias'])],
@@ -183,6 +186,7 @@ class AdminController extends Controller
         $user->name = $validated['name'];
         $user->email = $validated['email'];
         $user->ci = $validated['ci'];
+        $user->orci = $validated['orci'] ?? null;
         $user->teaching_category = $validated['teaching_category'] ?? null;
         $user->scientific_category = $validated['scientific_category'] ?? null;
         $user->professional_level = $validated['professional_level'] ?? null;

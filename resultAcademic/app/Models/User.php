@@ -30,6 +30,7 @@ class User extends Authenticatable
         'password',
         'department_id',
         'ci',
+        'orci',
         'teaching_category',
         'scientific_category',
         'professional_level',

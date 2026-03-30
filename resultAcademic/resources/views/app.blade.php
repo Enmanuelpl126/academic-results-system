@@ -1,21 +1,26 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"  @class(['dark' => ($appearance ?? 'system') == 'dark'])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="color-scheme" content="light dark">
 
-        {{-- Inline script to detect system dark mode preference and apply it immediately --}}
+        {{-- Early theme application script: force LIGHT theme consistently across browsers and domains --}}
         <script>
             (function() {
-                const appearance = '{{ $appearance ?? "system" }}';
+                try {
+                    // Force light: remove any dark class immediately
+                    document.documentElement.classList.remove('dark');
 
-                if (appearance === 'system') {
-                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-                    if (prefersDark) {
-                        document.documentElement.classList.add('dark');
-                    }
-                }
+                    // Persist explicit light preference for SSR and future loads (across domains)
+                    try { localStorage.setItem('appearance', 'light'); } catch (e) {}
+                    // Cookie valid for 1 year, SameSite=Lax
+                    (function(){
+                        var maxAge = 365 * 24 * 60 * 60;
+                        var isSecure = window.location && window.location.protocol === 'https:';
+                        document.cookie = 'appearance=light;path=/;max-age=' + maxAge + ';SameSite=Lax' + (isSecure ? ';Secure' : '');
+                    })();
+                } catch (e) { /* noop */ }
             })();
         </script>
 

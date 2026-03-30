@@ -14,16 +14,15 @@ defineProps<{
 
 <template>
     <div class="relative grid h-dvh flex-col items-center justify-center px-8 sm:px-0 lg:max-w-none lg:grid-cols-2 lg:px-0">
-        <div class="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
-            <div class="absolute inset-0 bg-zinc-900" />
+        <div class="relative hidden h-full flex-col p-10 lg:flex dark:border-r bg-neutral-50 text-neutral-900 dark:bg-zinc-900 dark:text-white">
             <Link :href="route('home')" class="relative z-20 flex items-center text-lg font-medium">
-                <AppLogoIcon class="mr-2 size-8 fill-current text-white" />
+                <AppLogoIcon class="mr-2 size-8 fill-current text-black dark:text-white" />
                 {{ name }}
             </Link>
             <div v-if="quote" class="relative z-20 mt-auto">
                 <blockquote class="space-y-2">
                     <p class="text-lg">&ldquo;{{ quote.message }}&rdquo;</p>
-                    <footer class="text-sm text-neutral-300">{{ quote.author }}</footer>
+                    <footer class="text-sm text-neutral-600 dark:text-neutral-300">{{ quote.author }}</footer>
                 </blockquote>
             </div>
         </div>

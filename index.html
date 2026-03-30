@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte de la Industria Web 2025 | Análisis Profundo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/dist/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;800&display=swap');
+        
+        :root { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; }
+        .serif { font-family: 'Crimson Pro', serif; }
+        .sidebar-link:hover { @apply bg-indigo-50 text-indigo-700 border-r-4 border-indigo-600; }
+        .chart-wrapper { position: relative; height: 350px; width: 100%; }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+        
+        /* Estilo de lectura larga */
+        p { margin-bottom: 1.5rem; line-height: 1.8; color: #374151; font-size: 1.1rem; }
+        h2 { margin-top: 3rem; margin-bottom: 1.5rem; font-weight: 800; font-size: 2.25rem; letter-spacing: -0.025em; }
+    </style>
+</head>
+<body class="bg-[#fcfcfc]">
+
+    <div class="flex">
+        <aside class="hidden lg:flex w-72 h-screen sticky top-0 bg-white border-r flex-col p-6">
+            <div class="mb-10">
+                <span class="text-2xl font-black text-indigo-900 tracking-tighter">INSIGHTS<span class="text-indigo-500">25</span></span>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Intelligence for Developers</p>
+            </div>
+            
+            <nav class="flex-1 space-y-1">
+                <p class="text-[10px] font-bold text-gray-400 uppercase mb-4 tracking-widest">Contenido</p>
+                <a href="#ejecutivo" class="sidebar-link block p-3 text-sm font-semibold transition">I. Resumen Ejecutivo</a>
+                <a href="#ia" class="sidebar-link block p-3 text-sm font-semibold transition">II. La Revolución de la IA</a>
+                <a href="#frontend" class="sidebar-link block p-3 text-sm font-semibold transition">III. Frontend & UX</a>
+                <a href="#backend" class="sidebar-link block p-3 text-sm font-semibold transition">IV. Arquitectura Backend</a>
+                <a href="#cloud" class="sidebar-link block p-3 text-sm font-semibold transition">V. Cloud & Infraestructura</a>
+                <a href="#laboral" class="sidebar-link block p-3 text-sm font-semibold transition">VI. Mercado Laboral</a>
+                <a href="#conclusiones" class="sidebar-link block p-3 text-sm font-semibold transition">VII. Conclusiones</a>
+            </nav>
+
+            <div class="pt-6 border-t">
+                <button class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-indigo-600 transition shadow-lg">
+                    <i class="fas fa-file-download mr-2"></i> Informe Completo
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1">
+            
+            <section class="max-w-4xl mx-auto pt-20 pb-16 px-6">
+                <div class="mb-6 text-indigo-600 font-bold tracking-widest text-sm uppercase">Análisis de la Industria 2025</div>
+                <h1 class="text-5xl md:text-7xl font-black text-slate-900 leading-tight mb-8 serif italic">
+                    El año en que la Web se volvió <span class="text-indigo-600">inteligente.</span>
+                </h1>
+                <div class="flex items-center gap-4 border-y py-6 mb-12">
+                    <img src="https://i.pravatar.cc/150?u=techreport" class="w-12 h-12 rounded-full border-2 border-indigo-100">
+                    <div>
+                        <p class="m-0 font-bold text-slate-900">Por el Equipo de Análisis Global</p>
+                        <p class="m-0 text-xs text-gray-500 uppercase tracking-widest">Publicado: 27 de Diciembre, 2025 • 15 min de lectura</p>
+                    </div>
+                </div>
+
+                <article id="ejecutivo" class="scroll-mt-24">
+                    <h2 class="text-slate-900">I. Resumen Ejecutivo</h2>
+                    <p class="text-xl text-slate-600 serif italic leading-relaxed mb-10">
+                        "En 2025, hemos sido testigos de la consolidación de la Web 3.0 no como un concepto de blockchain, sino como una red de interfaces cognitivas y autónomas. La eficiencia ha superado a la novedad."
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                        <div class="bg-indigo-50 p-6 rounded-2xl border border-indigo-100">
+                            <h4 class="font-bold text-indigo-900 mb-2 underline decoration-indigo-300">Punto Clave A</h4>
+                            <p class="text-sm m-0">La adopción de <strong>TypeScript</strong> ha llegado al punto de no retorno, convirtiéndose en el lenguaje requerido para el 92% de las vacantes senior en el primer semestre.</p>
+                        </div>
+                        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                            <h4 class="font-bold text-slate-900 mb-2 underline decoration-slate-300">Punto Clave B</h4>
+                            <p class="text-sm m-0">El <strong>Edge Computing</strong> ha reducido la latencia global en un 35%, moviendo la lógica de negocio de los centros de datos masivos a los nodos de borde.</p>
+                        </div>
+                    </div>
+                </article>
+
+                <hr class="my-20">
+
+                <article id="ia" class="scroll-mt-24">
+                    <h2 class="text-slate-900 tracking-tighter">II. La Revolución de la IA Generativa</h2>
+                    <p>
+                        A diferencia de 2023 y 2024, donde la IA era una herramienta externa (como ChatGPT), en 2025 la IA se ha incrustado en el <strong>runtime</strong> de la web. La llegada de la API <code>window.ai</code> en navegadores modernos ha permitido que los desarrolladores ejecuten inferencia local sin servidores costosos.
+                    </p>
+                    
+                    <div class="my-12 p-8 bg-white border-2 border-slate-100 rounded-3xl shadow-sm">
+                        <h3 class="text-center font-bold text-slate-400 uppercase text-xs tracking-widest mb-8">Uso de Herramientas de IA por Etapa</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="chartIA"></canvas>
+                        </div>
+                    </div>
+
+                    <p>
+                        Los datos sugieren que el <strong>70% del código</strong> producido en empresas Fortune 500 ahora es "asistido". Esto no ha reducido la necesidad de desarrolladores, pero ha elevado el estándar de lo que un desarrollador "Junior" debe saber para ser competitivo.
+                    </p>
+                </article>
+
+                <article id="frontend" class="scroll-mt-24 mt-24">
+                    <h2 class="text-slate-900">III. El Paisaje del Frontend</h2>
+                    <p>
+                        <strong>React 19 y Next.js 15</strong> han estabilizado los Server Components, pero la verdadera sorpresa del año ha sido el crecimiento exponencial de <strong>Astro</strong> y <strong>Qwik</strong>. La industria ha pasado de la "Hidratación masiva" a la "Resumibilidad" (Resumability).
+                    </p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-10">
+                        <div class="text-center p-4 border rounded-xl">
+                            <p class="m-0 text-3xl font-black text-indigo-600">45%</p>
+                            <p class="m-0 text-[10px] font-bold text-gray-400">NEXT.JS</p>
+                        </div>
+                        <div class="text-center p-4 border rounded-xl">
+                            <p class="m-0 text-3xl font-black text-indigo-600">22%</p>
+                            <p class="m-0 text-[10px] font-bold text-gray-400">ASTRO</p>
+                        </div>
+                        <div class="text-center p-4 border rounded-xl">
+                            <p class="m-0 text-3xl font-black text-indigo-600">18%</p>
+                            <p class="m-0 text-[10px] font-bold text-gray-400">SVELTE</p>
+                        </div>
+                    </div>
+
+                    <p>
+                        El diseño de interfaces ahora se centra en <strong>NUI (Natural User Interfaces)</strong>. El desarrollo web ya no es solo visual; la integración con voz y gestos a través de estándares web abiertos ha crecido un 40% este año.
+                    </p>
+                </article>
+
+                <article id="laboral" class="scroll-mt-24 mt-24 bg-indigo-900 p-10 rounded-3xl text-white">
+                    <h2 class="text-white mt-0">VI. Mercado Laboral y Salarios</h2>
+                    <p class="text-indigo-200">
+                        A pesar de los temores de automatización, la demanda de desarrolladores especializados en arquitectura de sistemas y seguridad ha alcanzado máximos históricos.
+                    </p>
+                    
+                    <div class="chart-wrapper my-8" style="height: 250px;">
+                        <canvas id="chartSalarios"></canvas>
+                    </div>
+
+                    <p class="text-sm italic opacity-80 mt-6">
+                        * Datos ajustados a la inflación de 2025. Se observa una prima del 15% para desarrolladores con conocimientos profundos de modelos locales (Wasm/WebGPU).
+                    </p>
+                </article>
+
+                <article id="conclusiones" class="scroll-mt-24 mt-24 pb-20">
+                    <h2 class="text-slate-900 italic serif">VII. Conclusiones</h2>
+                    <p>
+                        El desarrollo web en 2025 es una disciplina de <strong>alta fidelidad</strong>. Las barreras entre lo que es una aplicación nativa y una aplicación web se han evaporado gracias a las nuevas APIs de sistema.
+                    </p>
+                    <p class="font-bold">
+                        La recomendación para 2026: Invertir en fundamentos de infraestructura y aprendizaje automático, mientras se delega la sintaxis repetitiva a los agentes de IA.
+                    </p>
+                </article>
+
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Configuración de Gráfico IA
+        const ctxIA = document.getElementById('chartIA').getContext('2d');
+        new Chart(ctxIA, {
+            type: 'line',
+            data: {
+                labels: ['Planificación', 'Coding', 'Pruebas', 'Documentación', 'Despliegue'],
+                datasets: [{
+                    label: 'Nivel de Automatización (%)',
+                    data: [30, 75, 85, 90, 60],
+                    borderColor: '#4f46e5',
+                    borderWidth: 4,
+                    pointBackgroundColor: '#fff',
+                    pointBorderWidth: 3,
+                    tension: 0.3,
+                    fill: true,
+                    backgroundColor: 'rgba(79, 70, 229, 0.05)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, max: 100 } }
+            }
+        });
+
+        // Configuración de Gráfico Salarios (Horizontal Bar)
+        const ctxSal = document.getElementById('chartSalarios').getContext('2d');
+        new Chart(ctxSal, {
+            type: 'bar',
+            data: {
+                labels: ['Frontend Senior', 'Backend/Cloud', 'AI Engineer', 'Cybersecurity'],
+                datasets: [{
+                    label: 'Salario Anual Promedio ($k)',
+                    data: [135, 148, 175, 162],
+                    backgroundColor: ['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.4)', '#fff', 'rgba(255,255,255,0.6)'],
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { 
+                    x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+                    y: { ticks: { color: '#fff' }, grid: { display: false } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

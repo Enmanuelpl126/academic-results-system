@@ -65,6 +65,7 @@ const form = reactive({
   name: props.user?.name || '',
   email: (props.user as any)?.email || '',
   ci: (props.user as any)?.ci || '',
+  orci: (props.user as any)?.orci || '',
   department_id: (props.user as any)?.department_id || (props.user?.department as any)?.id || '',
   teaching_category: (props.user as any)?.teaching_category || '',
   scientific_category: (props.user as any)?.scientific_category || '',
@@ -75,6 +76,7 @@ const errors = reactive<{ [k: string]: string | null }>({
   name: null,
   email: null,
   ci: null,
+  orci: null,
   professional_level: null
 })
 
@@ -86,6 +88,7 @@ watch(
     errors.name = serverErrors.name || null
     errors.email = serverErrors.email || null
     errors.ci = serverErrors.ci || null
+    errors.orci = serverErrors.orci || null
     errors.professional_level = serverErrors.professional_level || null
   }
 )
@@ -101,6 +104,7 @@ function cancelEdit() {
   form.name = props.user?.name || ''
   form.email = (props.user as any)?.email || ''
   form.ci = (props.user as any)?.ci || ''
+  form.orci = (props.user as any)?.orci || ''
   form.department_id = (props.user as any)?.department_id || (props.user?.department as any)?.id || ''
   form.teaching_category = (props.user as any)?.teaching_category || ''
   form.scientific_category = (props.user as any)?.scientific_category || ''
@@ -126,6 +130,7 @@ async function save() {
       name: form.name,
       email: form.email,
       ci: form.ci || null,
+      orci: form.orci || null,
       teaching_category: form.teaching_category || null,
       scientific_category: form.scientific_category || null,
       professional_level: form.professional_level
@@ -258,6 +263,24 @@ async function save() {
             </template>
             <template v-else>
               <div class="text-gray-900">{{ (props.user as any)?.ci || '—' }}</div>
+            </template>
+          </div>
+
+          <!-- ORCI -->
+          <div class="sm:col-span-2">
+            <label class="block text-sm text-gray-700 mb-1">ORCI</label>
+            <template v-if="isEditing">
+              <input
+                type="text"
+                v-model="form.orci"
+                :class="['w-full rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500', errors.orci ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300']"
+                placeholder="Identificador ORCI"
+                autocomplete="off"
+              />
+              <p v-if="errors.orci" class="mt-1 text-sm text-red-600">{{ errors.orci }}</p>
+            </template>
+            <template v-else>
+              <div class="text-gray-900">{{ (props.user as any)?.orci || '—' }}</div>
             </template>
           </div>
         </div>

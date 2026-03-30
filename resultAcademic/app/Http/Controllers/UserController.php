@@ -57,6 +57,7 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'ci' => ['nullable', 'digits:11', 'unique:users,ci'],
+            'orci' => ['nullable', 'string', 'max:255'],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
             // Validar contra roles de Spatie por nombre
             'role' => ['required', 'exists:roles,name'],
@@ -72,6 +73,7 @@ class UserController extends Controller
         $user->password = Hash::make($validated['password']);
         $user->department_id = $validated['department_id'] ?? null;
         $user->ci = $validated['ci'] ?? null;
+        $user->orci = $validated['orci'] ?? null;
         $user->teaching_category = $validated['teaching_category'] ?? null;
         $user->scientific_category = $validated['scientific_category'] ?? null;
         $user->professional_level = $validated['professional_level'] ?? null;

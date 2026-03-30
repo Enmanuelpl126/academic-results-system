@@ -22,6 +22,11 @@ const savedKey = ref(0);
 const userLocal = ref<any>({ ...(user || {}) });
 
 function handleSave(payload: Record<string, any>) {
+  // Ensure 'orci' is included in the payload if it exists
+  if (payload.orci === undefined) {
+    payload.orci = userLocal.value.orci;
+  }
+
   router.patch('/settings/profile', payload, {
     preserveScroll: true,
     onSuccess: () => {
@@ -66,6 +71,15 @@ function goBack() {
                   :savedKey="savedKey"
                   @save="handleSave"
                 />
+                <div class="bg-white rounded-lg shadow p-6">
+                  <h3 class="text-lg font-semibold text-gray-900 mb-4">Identificadores</h3>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-sm text-gray-700 mb-1">ORCI</label>
+                      <div class="text-gray-900">{{ userLocal.orci || '—' }}</div>
+                    </div>
+                  </div>
+                </div>
             </div>
         </div>
     </NoNavLayout>

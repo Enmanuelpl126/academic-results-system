@@ -50,6 +50,10 @@
           <div class="text-gray-900 font-medium">{{ selectedUser.ci || '—' }}</div>
         </div>
         <div>
+          <div class="text-sm text-gray-500">ORCI</div>
+          <div class="text-gray-900 font-medium">{{ selectedUser.orci || '—' }}</div>
+        </div>
+        <div>
           <div class="text-sm text-gray-500">Departamento</div>
           <div class="text-gray-900 font-medium">{{ selectedUser.department?.name || 'Sin departamento' }}</div>
         </div>
@@ -459,6 +463,17 @@
               required
             />
             <p v-if="formErrors.email" class="mt-1 text-sm text-red-600">{{ formErrors.email }}</p>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">ORCI</label>
+            <input
+              type="text"
+              v-model="userFormData.orci"
+              :class="['w-full rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500', formErrors.orci ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300']"
+              placeholder="Identificador ORCI"
+              autocomplete="off"
+            />
+            <p v-if="formErrors.orci" class="mt-1 text-sm text-red-600">{{ formErrors.orci }}</p>
           </div>
           <div class="md:col-span-1">
             <label class="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
@@ -912,6 +927,7 @@ const userFormData = ref({
   name: '',
   email: '',
   ci: '',
+  orci: '',
   department_id: '',
   role: 'profesor',
   docente_category: '',
@@ -1256,6 +1272,7 @@ const openUserForm = () => {
     name: '',
     email: '',
     ci: '',
+    orci: '',
     department_id: '',
     role: 'profesor',
     docente_category: '',
@@ -1277,6 +1294,7 @@ const editUser = (user) => {
     name: user.name,
     email: user.email,
     ci: user.ci || '',
+    orci: user.orci || '',
     department_id: user.department_id || '',
     role: (user.roles && user.roles[0] && user.roles[0].name) ? user.roles[0].name : 'profesor',
     docente_category: user.teaching_category || '',
@@ -1321,6 +1339,7 @@ const handleUserSubmit = () => {
     name: userFormData.value.name,
     email: userFormData.value.email,
     ci: ciSanitized || null,
+    orci: userFormData.value.orci || null,
     department_id: userFormData.value.department_id || null,
     role: userFormData.value.role,
     teaching_category: userFormData.value.docente_category || null,

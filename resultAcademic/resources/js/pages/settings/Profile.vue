@@ -41,11 +41,12 @@ const stats = computed(() => ({
     events: (page.props as any)?.events_count ?? 0,
 }));
 
-function onSave(payload: { name: string; ci?: string | null; department_id?: number | string | null; teaching_category?: string | null; scientific_category?: string | null; professional_level: string }) {
+function onSave(payload: { name: string; ci?: string | null; orci?: string | null; department_id?: number | string | null; teaching_category?: string | null; scientific_category?: string | null; professional_level: string }) {
     router.patch(route('profile.update'), {
         name: payload.name,
         email: (user.email || '').toLowerCase(),
         ci: payload.ci ?? null,
+        orci: payload.orci ?? null,
         department_id: payload.department_id ?? null,
         teaching_category: payload.teaching_category ?? null,
         scientific_category: payload.scientific_category ?? null,
@@ -57,6 +58,7 @@ function onSave(payload: { name: string; ci?: string | null; department_id?: num
                 ...(currentUser.value as any),
                 name: payload.name,
                 ci: payload.ci ?? null,
+                orci: payload.orci ?? null,
                 department_id: payload.department_id ?? null,
                 teaching_category: payload.teaching_category ?? null,
                 scientific_category: payload.scientific_category ?? null,

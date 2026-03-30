@@ -2,19 +2,12 @@ import { onMounted, ref } from 'vue';
 
 type Appearance = 'light' | 'dark' | 'system';
 
-export function updateTheme(value: Appearance) {
+export function updateTheme(_value: Appearance) {
     if (typeof window === 'undefined') {
         return;
     }
-
-    if (value === 'system') {
-        const mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
-        const systemTheme = mediaQueryList.matches ? 'dark' : 'light';
-
-        document.documentElement.classList.toggle('dark', systemTheme === 'dark');
-    } else {
-        document.documentElement.classList.toggle('dark', value === 'dark');
-    }
+    // HARD-LOCK: Always force LIGHT theme
+    document.documentElement.classList.remove('dark');
 }
 
 const setCookie = (name: string, value: string, days = 365) => {
@@ -57,35 +50,29 @@ export function initializeTheme() {
         return;
     }
 
-    // Initialize theme from saved preference or default to system...
-    const savedAppearance = getStoredAppearance();
-    updateTheme(savedAppearance || 'system');
-
-    // Set up system theme change listener...
-    mediaQuery()?.addEventListener('change', handleSystemThemeChange);
+    // Persist explicit LIGHT preference and apply it
+    try { localStorage.setItem('appearance', 'light'); } catch (_e) {}
+    setCookie('appearance', 'light');
+    updateTheme('light');
 }
 
-const appearance = ref<Appearance>('system');
+const appearance = ref<Appearance>('light');
 
 export function useAppearance() {
     onMounted(() => {
-        const savedAppearance = localStorage.getItem('appearance') as Appearance | null;
-
-        if (savedAppearance) {
-            appearance.value = savedAppearance;
-        }
+        appearance.value = 'light';
+        try { localStorage.setItem('appearance', 'light'); } catch (_e) {}
+        setCookie('appearance', 'light');
     });
 
-    function updateAppearance(value: Appearance) {
-        appearance.value = value;
+    function updateAppearance(_value: Appearance) {
+        appearance.value = 'light';
 
-        // Store in localStorage for client-side persistence...
-        localStorage.setItem('appearance', value);
+        // Persist choice as light
+        try { localStorage.setItem('appearance', 'light'); } catch (_e) {}
+        setCookie('appearance', 'light');
 
-        // Store in cookie for SSR...
-        setCookie('appearance', value);
-
-        updateTheme(value);
+        updateTheme('light');
     }
 
     return {

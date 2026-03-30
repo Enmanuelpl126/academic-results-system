@@ -164,4 +164,10 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    /* Custom styles for select options in dark mode */
+    .dark select option {
+        background-color: var(--popover);
+        color: var(--popover-foreground);
+    }
 }
